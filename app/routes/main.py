@@ -1,4 +1,5 @@
-from flask import Blueprint, render_template, request, jsonify, session
+import os
+from flask import Blueprint, render_template, request, jsonify, session, current_app
 from app.models import Product, Category, db
 from app import cache
 from datetime import datetime, timedelta
@@ -34,20 +35,59 @@ _last_expired_check = {"at": None}
 
 @cache.memoize(timeout=30)
 def _get_homepage_products():
-    featured = Product.query.options(selectinload(Product.variants)).filter_by(is_featured=True, is_active=True).limit(6).all()
     all_products = Product.query.options(selectinload(Product.variants)).filter_by(is_active=True).order_by(Product.created_at.desc()).limit(12).all()
     categories = Category.query.all()
-    return featured, all_products, categories
+    return all_products, categories
+
+
+@cache.memoize(timeout=30)
+def _get_latest_products():
+    """The 'Latest Hits' swipe carousel (latest_products): newest active pieces."""
+    return (
+        Product.query.options(selectinload(Product.variants))
+        .filter_by(is_active=True)
+        .order_by(Product.created_at.desc())
+        .limit(8)
+        .all()
+    )
+
+
+_latest_bg_cache = {}
+
+
+def _get_latest_bg():
+    """Optional background for the Latest Hits section.
+
+    Drop a file into app/static and redeploy - no code or DB change needed:
+      videos/latest-hits.mp4                       looping muted video
+      images/latest-hits-bg.(jpg|png|webp)         photo (also the video poster)
+    Neither present = the logo is shown faintly instead. Checked once per worker.
+    """
+    if 'bg' not in _latest_bg_cache:
+        static_dir = current_app.static_folder
+
+        def found(*candidates):
+            for rel in candidates:
+                if os.path.isfile(os.path.join(static_dir, rel)):
+                    return rel
+            return None
+
+        _latest_bg_cache['bg'] = {
+            'video': found('videos/latest-hits.mp4'),
+            'image': found('images/latest-hits-bg.jpg', 'images/latest-hits-bg.png', 'images/latest-hits-bg.webp'),
+        }
+    return _latest_bg_cache['bg']
 
 
 @main_bp.route('/')
 def index():
     _maybe_cancel_expired_orders()
-    featured, all_products, categories = _get_homepage_products()
+    all_products, categories = _get_homepage_products()
     return render_template('main/index.html',
-                           featured=featured,
                            products=all_products,
-                           categories=categories)
+                           categories=categories,
+                           latest_products=_get_latest_products(),
+                           latest_bg=_get_latest_bg())
 
 
 @cache.memoize(timeout=30)
@@ -88,7 +128,9 @@ def shop():
                            categories=categories,
                            current_category=category_slug,
                            sort=sort,
-                           search=search)
+                           search=search,
+                           latest_products=_get_latest_products(),
+                           latest_bg=_get_latest_bg())
 
 
 @cache.memoize(timeout=30)

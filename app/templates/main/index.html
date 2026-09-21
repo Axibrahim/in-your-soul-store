@@ -181,82 +181,8 @@
 <section class="section">
   <div class="section-inner">
     <div class="section-header reveal">
-      <div class="section-eyebrow">NEW DROPS</div>
-      <h2 class="section-title">Featured Pieces</h2>
-      <div class="section-divider"></div>
-    </div>
-
-    {% if featured %}
-      <div class="products-grid">
-        {% for product in featured %}
-          {% set product_url = url_for('main.product_detail', product_id=product.id) %}
-          <div
-            class="product-card reveal product-card--clickable"
-            data-product-url="{{ product_url }}"
-            role="link"
-            tabindex="0"
-          >
-            <div class="product-card-img">
-              {% if product.image_url %}
-                <img src="{{ product.image_url }}" alt="{{ product.name }}" loading="lazy"/>
-                {% if product.image_url_2 %}
-                  <div class="product-card-img-2">
-                    <img
-                      src="{{ product.image_url_2 }}"
-                      alt="{{ product.name }} alternate view"
-                      loading="lazy"
-                    />
-                  </div>
-                {% endif %}
-              {% else %}
-                <div class="product-card-placeholder product-card-placeholder--svg">
-                  <svg width="60" height="60" viewBox="0 0 60 60" fill="none" aria-hidden="true">
-                    <rect width="60" height="60" fill="#0b180b"/>
-                    <text x="30" y="38" text-anchor="middle" font-family="Space Mono" font-size="10" fill="#76ff03" opacity="0.4">FREKS</text>
-                  </svg>
-                </div>
-              {% endif %}
-              <span class="product-badge">NEW</span>
-            </div>
-
-            <div class="product-card-body">
-              <div class="product-name">{{ product.name }}</div>
-              <div class="product-price">{{ "%.0f"|format(product.price) }} EGP</div>
-              <div class="product-stock">
-                {% set stock = product.get_total_stock() %}
-                {% if stock > 10 %}
-                  <span class="live-dot"></span> In Stock
-                {% elif stock > 0 %}
-                  <span class="stock-warning">⚡ Only {{ stock }} left</span>
-                {% else %}
-                  <span class="stock-sold">Sold Out</span>
-                {% endif %}
-              </div>
-            </div>
-
-            <div class="product-card-actions">
-              <a href="{{ product_url }}" class="btn btn--full">
-                <span>VIEW PIECE</span>
-              </a>
-            </div>
-          </div>
-        {% endfor %}
-      </div>
-    {% else %}
-      <div class="empty-state">
-        <div class="empty-icon">📦</div>
-        <h3>DROPS COMING SOON</h3>
-        <p>Check back for the first collection.</p>
-      </div>
-    {% endif %}
-
-    <div class="view-all-wrap reveal">
-      <a href="{{ shop_url }}" class="btn btn--lg">
-        <span>VIEW ALL PIECES</span>
-      </a>
-    </div>
-  </div>
-</section>
+{# Latest Hits swipe carousel (replaces the old Featured Pieces section) #}
+{% include 'partials/latest_products_swipe_cards.html' %}
 
 <section class="closer-section">
   <div class="closer-inner reveal">

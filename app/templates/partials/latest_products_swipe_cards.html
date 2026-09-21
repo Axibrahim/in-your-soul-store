@@ -1,0 +1,114 @@
+{#
+  Latest Hits — centered swipe carousel (backend name: latest_products_swipe_cards).
+  Included by main/index.html and main/shop.html.
+
+  Needs from the route:
+    latest_products : list of Product (newest first, variants eager-loaded)
+    latest_bg       : {'video': static path | None, 'image': static path | None}
+
+  Optional background media (drop the file in, redeploy, done):
+    app/static/videos/latest-hits.mp4          -> looping muted video background
+    app/static/images/latest-hits-bg.jpg|png|webp -> photo background (also used as the video poster)
+  With neither file present the logo is shown faintly behind the section.
+#}
+{% if latest_products %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/latest-swipe.css') }}?v=1"/>
+
+<section class="ls-section" id="latest-hits" aria-labelledby="latest-hits-title" data-latest-swipe>
+
+  <div class="ls-bg" aria-hidden="true">
+    {% if latest_bg.video %}
+      <video
+        class="ls-bg-media"
+        src="{{ url_for('static', filename=latest_bg.video) }}"
+        {% if latest_bg.image %}poster="{{ url_for('static', filename=latest_bg.image) }}"{% endif %}
+        muted loop playsinline preload="metadata"
+      ></video>
+    {% elif latest_bg.image %}
+      <img class="ls-bg-media" src="{{ url_for('static', filename=latest_bg.image) }}" alt=""/>
+    {% else %}
+      <img class="ls-bg-logo" src="{{ url_for('static', filename='images/logo.png') }}" alt=""/>
+    {% endif %}
+    <div class="ls-bg-overlay"></div>
+  </div>
+
+  <div class="ls-header">
+    <div class="section-eyebrow ls-rise" style="--ls-k:0">NEW DROPS</div>
+    <h2 class="section-title ls-rise" id="latest-hits-title" style="--ls-k:1">Latest Hits</h2>
+    <div class="section-divider ls-rise" style="--ls-k:2"></div>
+  </div>
+
+  <div class="ls-stage">
+    <button type="button" class="ls-arrow ls-arrow--prev" aria-label="Previous piece" data-ls-prev>←</button>
+
+    <div class="ls-track" tabindex="0" role="region" aria-roledescription="carousel" aria-label="Latest pieces" data-ls-track>
+      {% for product in latest_products %}
+        {% set product_url = url_for('main.product_detail', product_id=product.id) %}
+        {% set stock = product.get_total_stock() %}
+        <div class="ls-slide" style="--ls-i:{{ loop.index0 }}">
+          <div
+            class="product-card product-card--clickable"
+            data-product-url="{{ product_url }}"
+            role="link"
+            tabindex="0"
+          >
+            <div class="product-card-img">
+              {% if product.image_url %}
+                <img src="{{ product.image_url }}" alt="{{ product.name }}" decoding="async" {% if not loop.first %}loading="lazy"{% endif %}/>
+                {% if product.image_url_2 %}
+                  <div class="product-card-img-2">
+                    <img src="{{ product.image_url_2 }}" alt="{{ product.name }} alternate view" loading="lazy" decoding="async"/>
+                  </div>
+                {% endif %}
+              {% else %}
+                <div class="product-card-placeholder product-card-placeholder--svg">
+                  <svg width="60" height="60" viewBox="0 0 60 60" fill="none" aria-hidden="true">
+                    <rect width="60" height="60" fill="#0b180b"/>
+                    <text x="30" y="38" text-anchor="middle" font-family="Space Mono" font-size="10" fill="#76ff03" opacity="0.4">FREKS</text>
+                  </svg>
+                </div>
+              {% endif %}
+              <span class="product-badge">NEW</span>
+            </div>
+
+            <div class="product-card-body">
+              <div class="product-name">{{ product.name }}</div>
+              <div class="product-price">{{ "%.0f"|format(product.price) }} EGP</div>
+              <div class="product-stock">
+                {% if stock > 10 %}
+                  <span class="live-dot"></span> In Stock
+                {% elif stock > 0 %}
+                  <span class="stock-warning">⚡ Only {{ stock }} left</span>
+                {% else %}
+                  <span class="stock-sold">Sold Out</span>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="product-card-actions">
+              <a href="{{ product_url }}" class="btn btn--full"><span>VIEW PIECE</span></a>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <button type="button" class="ls-arrow ls-arrow--next" aria-label="Next piece" data-ls-next>→</button>
+  </div>
+
+  <div class="ls-dots ls-rise" style="--ls-k:4">
+    {% for product in latest_products %}
+      <button type="button" class="ls-dot" aria-label="Go to {{ product.name }}" data-ls-dot></button>
+    {% endfor %}
+  </div>
+
+  {% if request.endpoint != 'main.shop' %}
+  <div class="ls-cta ls-rise" style="--ls-k:5">
+    <a href="{{ url_for('main.shop') }}" class="btn btn--lg"><span>VIEW ALL PIECES</span></a>
+  </div>
+  {% endif %}
+
+</section>
+
+<script src="{{ url_for('static', filename='js/latest-swipe.js') }}?v=1" defer></script>
+{% endif %}
