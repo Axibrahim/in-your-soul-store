@@ -60,7 +60,7 @@
           {% endif %}
           {% set stock = product.get_total_stock() %}
           {% if product.is_featured %}
-            <span class="product-badge">FEATURED</span>
+            <span class="product-badge">LATEST</span>
           {% elif stock == 0 %}
             <span class="product-badge" style="background:var(--muted);color:var(--text-dim);">SOLD OUT</span>
           {% elif stock <= 5 %}

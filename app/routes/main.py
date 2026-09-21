@@ -4,6 +4,7 @@ from app.models import Product, Category, db
 from app import cache
 from datetime import datetime, timedelta
 from sqlalchemy.orm import selectinload, joinedload
+from flask_sqlalchemy.pagination import Pagination
 
 main_bp = Blueprint('main', __name__)
 
@@ -42,14 +43,18 @@ def _get_homepage_products():
 
 @cache.memoize(timeout=30)
 def _get_latest_products():
-    """The 'Latest Hits' swipe carousel (latest_products): newest active pieces."""
-    return (
-        Product.query.options(selectinload(Product.variants))
-        .filter_by(is_active=True)
-        .order_by(Product.created_at.desc())
-        .limit(8)
-        .all()
-    )
+    """The 'Latest Hits' swipe carousel (latest_products).
+
+    Shows the active products ticked "Show in Latest Hits" in the admin panel
+    (that checkbox is the existing is_featured column, just relabelled - no DB
+    change). Newest first, max 8. If nothing is ticked yet it falls back to the
+    newest pieces, so the section never disappears.
+    """
+    base = Product.query.options(selectinload(Product.variants)).filter_by(is_active=True)
+    picked = base.filter_by(is_featured=True).order_by(Product.created_at.desc()).limit(8).all()
+    if picked:
+        return picked
+    return base.order_by(Product.created_at.desc()).limit(8).all()
 
 
 _latest_bg_cache = {}
@@ -90,6 +95,33 @@ def index():
                            latest_bg=_get_latest_bg())
 
 
+class _ShopPage(Pagination):
+    """Pagination rebuilt from plain cached data.
+
+    query.paginate() returns an object that holds the live query + DB session,
+    which can't be pickled - so it can't go into the cache (that is what made
+    /shop raise "Can't pickle Session" -> HTTP 500). We cache only the picklable
+    parts (items + numbers) and rebuild this object on every request. It keeps
+    every property shop.html uses: items, total, pages, page, has_prev/has_next,
+    prev_num/next_num and iter_pages().
+    """
+
+    def __init__(self, page, per_page, items, total):
+        self.page = page
+        self.per_page = per_page
+        self.max_per_page = None
+        self.error_out = False
+        self.items = items
+        self.total = total
+        self._query_args = {}
+
+    def _query_items(self):
+        return self.items
+
+    def _query_count(self):
+        return self.total
+
+
 @cache.memoize(timeout=30)
 def _get_shop_products(page, category_slug, sort, search):
     query = Product.query.options(selectinload(Product.variants)).filter_by(is_active=True)
@@ -109,9 +141,10 @@ def _get_shop_products(page, category_slug, sort, search):
     else:
         query = query.order_by(Product.created_at.desc())
 
-    products = query.paginate(page=page, per_page=12, error_out=False)
+    pg = query.paginate(page=page, per_page=12, error_out=False)
     categories = Category.query.all()
-    return products, categories
+    # plain, picklable data only - never the Pagination object itself
+    return pg.items, pg.page, pg.per_page, pg.total, categories
 
 
 @main_bp.route('/shop')
@@ -121,7 +154,8 @@ def shop():
     sort = request.args.get('sort', 'new')
     search = request.args.get('q', None)
 
-    products, categories = _get_shop_products(page, category_slug, sort, search)
+    items, pg_page, pg_per_page, pg_total, categories = _get_shop_products(page, category_slug, sort, search)
+    products = _ShopPage(pg_page, pg_per_page, items, pg_total)
 
     return render_template('main/shop.html',
                            products=products,

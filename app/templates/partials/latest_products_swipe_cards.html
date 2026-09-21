@@ -12,7 +12,7 @@
   With neither file present the logo is shown faintly behind the section.
 #}
 {% if latest_products %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/latest-swipe.css') }}?v=1"/>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/latest-swipe.css') }}?v=3"/>
 
 <section class="ls-section" id="latest-hits" aria-labelledby="latest-hits-title" data-latest-swipe>
 
@@ -45,16 +45,16 @@
       {% for product in latest_products %}
         {% set product_url = url_for('main.product_detail', product_id=product.id) %}
         {% set stock = product.get_total_stock() %}
-        <div class="ls-slide" style="--ls-i:{{ loop.index0 }}">
+        <div class="ls-slide">
           <div
             class="product-card product-card--clickable"
             data-product-url="{{ product_url }}"
             role="link"
             tabindex="0"
           >
-            <div class="product-card-img">
+            <div class="product-card-img" data-text="{{ 'SOLD OUT' if stock == 0 else 'LIMITED DROP' }}">
               {% if product.image_url %}
-                <img src="{{ product.image_url }}" alt="{{ product.name }}" decoding="async" {% if not loop.first %}loading="lazy"{% endif %}/>
+                <img src="{{ product.image_url }}" alt="{{ product.name }}" decoding="async" loading="lazy"/>
                 {% if product.image_url_2 %}
                   <div class="product-card-img-2">
                     <img src="{{ product.image_url_2 }}" alt="{{ product.name }} alternate view" loading="lazy" decoding="async"/>
@@ -110,5 +110,5 @@
 
 </section>
 
-<script src="{{ url_for('static', filename='js/latest-swipe.js') }}?v=1" defer></script>
+<script src="{{ url_for('static', filename='js/latest-swipe.js') }}?v=3" defer></script>
 {% endif %}

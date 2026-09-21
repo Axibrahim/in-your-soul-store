@@ -1,7 +1,22 @@
 /* ============================================================
    LATEST HITS — centered swipe carousel (latest_products_swipe_cards)
    Depends on the variables/classes in main.css (.product-card, .btn, ...)
+   Glass hover cards inspired by "glass cards" by codebykay101 (Uiverse.io)
    ============================================================ */
+
+/* animatable custom properties (fan + spread of the cards on hover).
+   Browsers without @property simply switch instantly - nothing breaks. */
+@property --ls-fan {
+  syntax: '<angle>';
+  inherits: true;
+  initial-value: 3deg;
+}
+
+@property --ls-spread {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: -10px;
+}
 
 .ls-section {
   --ls-w: clamp(230px, 66vw, 340px);   /* one card + a peek of its neighbours */
@@ -24,13 +39,17 @@
 
 .ls-bg-media {
   position: absolute;
-  inset: 0;
-  width: 100%;
+  top: 0;
+  bottom: 0;
+  left: -50px;                        /* a little wider than the section so it can drift */
+  width: calc(100% + 100px);
   height: 100%;
   object-fit: cover;
   opacity: 0.55;
   transform: scale(1.1);
-  transition: transform 2s cubic-bezier(0.22, 1, 0.36, 1);
+  /* --ls-p (0..1) = how far the carousel is scrolled; the background drifts the other way */
+  translate: calc((var(--ls-p, 0.5) - 0.5) * -70px) 0;
+  transition: transform 2s cubic-bezier(0.22, 1, 0.36, 1), translate 0.35s ease-out;
 }
 
 .ls-section.is-in .ls-bg-media {
@@ -45,7 +64,8 @@
   height: auto;
   opacity: 0.08;
   transform: translate(-50%, -50%) scale(1.12);
-  transition: transform 2s cubic-bezier(0.22, 1, 0.36, 1), opacity 1.2s ease;
+  translate: calc((var(--ls-p, 0.5) - 0.5) * -50px) 0;
+  transition: transform 2s cubic-bezier(0.22, 1, 0.36, 1), opacity 1.2s ease, translate 0.35s ease-out;
 }
 
 .ls-section.is-in .ls-bg-logo {
@@ -113,20 +133,35 @@
 }
 
 .ls-slide {
+  position: relative;
   flex: 0 0 var(--ls-w);
   scroll-snap-align: center;
   scroll-snap-stop: always;          /* one card per swipe */
-  /* --ls-d (0 = centered … 2 = far away) and --ls-s (-1 left / 1 right) are set by latest-swipe.js */
+  /* --ls-d (0 = centered … 2 = far away) and --ls-s (-1 left / 1 right) are set by latest-swipe.js.
+     --ls-fan / --ls-spread give the side cards a loose "fanned" look that opens up on hover. */
   transform:
     perspective(1000px)
     rotateY(calc(var(--ls-s, 1) * var(--ls-d, 0) * -9deg))
+    rotateZ(calc(var(--ls-s, 1) * var(--ls-d, 0) * var(--ls-fan, 3deg)))
+    translateX(calc(var(--ls-s, 1) * var(--ls-d, 0) * var(--ls-spread, -10px)))
     scale(calc(1 - 0.08 * var(--ls-d, 0)));
-  opacity: calc(1 - 0.3 * var(--ls-d, 0));
-  will-change: transform, opacity;
+  will-change: transform;
+  transition:
+    --ls-fan 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+    --ls-spread 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .ls-slide .product-card {
   width: 100%;
+  /* the fade lives on the card (not the slide) so backdrop-filter can still see the background */
+  opacity: calc(1 - 0.3 * var(--ls-d, 0));
+  transition:
+    transform 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.4s ease,
+    box-shadow 0.4s ease,
+    background-color 0.4s ease,
+    -webkit-backdrop-filter 0.5s ease,
+    backdrop-filter 0.5s ease;
 }
 
 /* the "hover" actions are always visible here, like the mobile grid */
@@ -138,6 +173,149 @@
 .ls-slide.is-active .product-card {
   border-color: var(--accent);
   box-shadow: 0 0 0 1px var(--accent), 0 0 32px rgba(118, 255, 3, 0.25);
+}
+
+/* image parallax: the photo slides a little against the card while you swipe */
+.ls-slide .product-card-img > img,
+.ls-slide .product-card-img-2 img {
+  width: 112%;
+  max-width: none;
+  margin-left: -6%;
+  translate: calc(var(--ls-s, 1) * var(--ls-d, 0) * -2.5%) 0;
+}
+
+/* ---------- glass layers (only visible on hover / on the centered card on touch) ---------- */
+
+/* frosted sheen + cursor glare */
+.ls-slide .product-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    radial-gradient(260px circle at var(--mx, 50%) var(--my, 0%), rgba(255, 255, 255, 0.24), transparent 62%),
+    linear-gradient(rgba(255, 255, 255, 0.13), transparent);
+  transition: opacity 0.4s ease;
+}
+
+/* diagonal light sweep across the photo */
+.ls-slide .product-card-img::before {
+  content: '';
+  position: absolute;
+  top: -20%;
+  bottom: -20%;
+  left: -60%;
+  width: 40%;
+  z-index: 3;
+  pointer-events: none;
+  opacity: 0;
+  transform: skewX(-20deg);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.38), transparent);
+}
+
+/* frosted label strip that slides up from the bottom of the photo */
+.ls-slide .product-card-img::after {
+  content: attr(data-text);
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 0.62rem;
+  letter-spacing: 0.25em;
+  transform: translateY(100%);
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ls-slide .product-card-img:not([data-text])::after,
+.ls-slide .product-card-img[data-text='']::after {
+  display: none;
+}
+
+@keyframes ls-shine {
+  0%   { opacity: 0; left: -60%; }
+  20%  { opacity: 1; }
+  100% { opacity: 0; left: 130%; }
+}
+
+/* ---- mouse: the glass card ---- */
+@media (hover: hover) and (pointer: fine) {
+  /* the whole row opens up (fan -> straight, cards drift apart) */
+  .ls-stage:hover .ls-slide {
+    --ls-fan: 0deg;
+    --ls-spread: 14px;
+  }
+
+  .ls-slide .product-card:hover {
+    opacity: 1;
+    transform:
+      perspective(900px)
+      rotateX(var(--ls-rx, 0deg))
+      rotateY(var(--ls-ry, 0deg))
+      translateY(-8px)
+      scale(1.03);
+    background-color: rgba(11, 24, 11, 0.45);
+    border-color: rgba(255, 255, 255, 0.22);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    backdrop-filter: blur(14px) saturate(140%);
+    /* !important: main.js writes its own inline box-shadow on hover */
+    box-shadow:
+      0 25px 25px rgba(0, 0, 0, 0.25),
+      0 0 44px rgba(118, 255, 3, 0.25),
+      inset 0 1px 0 rgba(255, 255, 255, 0.28) !important;
+    /* follow the cursor closely while hovering */
+    transition:
+      transform 0.15s ease-out,
+      border-color 0.4s ease,
+      box-shadow 0.4s ease,
+      background-color 0.4s ease,
+      -webkit-backdrop-filter 0.5s ease,
+      backdrop-filter 0.5s ease;
+  }
+
+  .ls-slide .product-card:hover::after {
+    opacity: 1;
+  }
+
+  .ls-slide .product-card:hover .product-card-img::before {
+    animation: ls-shine 0.9s ease;
+  }
+
+  .ls-slide .product-card:hover .product-card-img::after {
+    transform: translateY(0);
+  }
+}
+
+/* ---- touch: no hover, so the centered card wears the glass instead ---- */
+@media (hover: none) {
+  .ls-slide.is-active .product-card {
+    border-color: rgba(255, 255, 255, 0.24);
+    box-shadow:
+      0 18px 24px rgba(0, 0, 0, 0.3),
+      0 0 34px rgba(118, 255, 3, 0.28),
+      inset 0 1px 0 rgba(255, 255, 255, 0.26);
+  }
+
+  .ls-slide.is-active .product-card::after {
+    opacity: 1;
+  }
+
+  .ls-slide.is-active .product-card-img::after {
+    transform: translateY(0);
+  }
 }
 
 /* ---------- dots ---------- */
@@ -234,9 +412,12 @@
 }
 
 /* ============================================================
-   POP ANIMATION — plays every time the section scrolls into view.
-   latest-swipe.js adds .ls-ready (JS is running) and toggles .is-in.
-   Without JS nothing is hidden, so the section still shows.
+   POP ANIMATIONS
+   1) ENTRY  - the cards bounce in one after another every time the section
+               scrolls into view (latest-swipe.js toggles .is-in / .ls-ready).
+               Without JS nothing is hidden, so the section still shows.
+   2) SWIPE  - every time a card lands in the middle it punches up, sends out a
+               ring, and then floats gently (.ls-punch is added by the JS).
    ============================================================ */
 .ls-section.ls-ready:not(.is-in) .ls-slide .product-card,
 .ls-section.ls-ready:not(.is-in) .ls-rise {
@@ -255,6 +436,26 @@
   100% { opacity: 1; transform: none; }
 }
 
+/* card lands in the middle: overshoot, settle */
+@keyframes ls-punch {
+  0%   { scale: 0.93; }
+  45%  { scale: 1.09; }
+  70%  { scale: 0.985; }
+  100% { scale: 1; }
+}
+
+/* ring that expands from the card and fades */
+@keyframes ls-ring {
+  0%   { opacity: 0.9; transform: scale(1); }
+  100% { opacity: 0;   transform: scale(1.22); }
+}
+
+/* idle levitation of the centered card ("translate" so it never fights the other transforms) */
+@keyframes ls-float {
+  0%, 100% { translate: 0 0; }
+  50%      { translate: 0 -6px; }
+}
+
 .ls-section.is-in .ls-slide .product-card {
   /* "backwards" = only applies the 0% frame during the delay, so hover styles keep working afterwards */
   animation: ls-pop 0.95s cubic-bezier(0.22, 1.2, 0.36, 1) backwards;
@@ -269,6 +470,30 @@
   animation-delay: calc(var(--ls-k, 0) * 0.09s);
 }
 
+.ls-slide::after {                   /* the ring */
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--accent);
+  box-shadow: 0 0 24px rgba(118, 255, 3, 0.45);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ls-section.is-in .ls-slide.is-active {
+  animation: ls-float 4.5s ease-in-out 1.3s infinite;
+}
+
+.ls-section.is-in .ls-slide.ls-punch {
+  animation:
+    ls-punch 0.8s cubic-bezier(0.34, 1.56, 0.64, 1),
+    ls-float 4.5s ease-in-out 1.3s infinite;
+}
+
+.ls-slide.ls-punch::after {
+  animation: ls-ring 0.8s ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ls-section.ls-ready:not(.is-in) .ls-slide .product-card,
   .ls-section.ls-ready:not(.is-in) .ls-rise {
@@ -276,16 +501,33 @@
   }
 
   .ls-section.is-in .ls-slide .product-card,
-  .ls-section.is-in .ls-rise {
+  .ls-section.is-in .ls-rise,
+  .ls-section.is-in .ls-slide.is-active,
+  .ls-section.is-in .ls-slide.ls-punch,
+  .ls-slide.ls-punch::after,
+  .ls-slide .product-card:hover .product-card-img::before {
     animation: none;
   }
 
   .ls-bg-media,
-  .ls-bg-logo {
+  .ls-bg-logo,
+  .ls-slide,
+  .ls-slide .product-card {
     transition: none;
+  }
+
+  .ls-bg-media,
+  .ls-bg-logo,
+  .ls-slide .product-card-img > img,
+  .ls-slide .product-card-img-2 img {
+    translate: none;
   }
 
   .ls-slide {
     transform: scale(calc(1 - 0.06 * var(--ls-d, 0)));
+  }
+
+  .ls-slide .product-card:hover {
+    transform: none;
   }
 }
