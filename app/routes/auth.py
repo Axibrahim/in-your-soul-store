@@ -1,5 +1,6 @@
 import sys
 from urllib.parse import urlparse
+from app.password_policy import validate_password
 from flask import (
     Blueprint,
     flash,
@@ -116,10 +117,11 @@ def reset_password(token):
             flash('Passwords do not match.', 'danger')
             return render_template('auth/reset_password.html', token=token)
 
-        if len(password) < 8:
-            flash('Password must be at least 8 characters.', 'danger')
+        errors = validate_password(password, username=user.username, email=user.email)
+        if errors:
+            flash('Password too weak: ' + ' '.join(errors), 'danger')
             return render_template('auth/reset_password.html', token=token)
-
+        
         user.set_password(password)
         user.session_token = None
         user.session_issued_at = None
@@ -160,8 +162,9 @@ def register():
             flash('Passwords do not match.', 'danger')
             return render_template('auth/register.html')
 
-        if len(password) < 8:
-            flash('Password must be at least 8 characters.', 'danger')
+        errors = validate_password(password, username=username, email=email)
+        if errors:
+            flash('Password too weak: ' + ' '.join(errors), 'danger')
             return render_template('auth/register.html')
 
         if User.query.filter_by(email=email).first():

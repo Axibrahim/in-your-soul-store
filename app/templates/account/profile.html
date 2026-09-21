@@ -59,8 +59,24 @@
         </div>
         <div class="field">
           <label>NEW PASSWORD</label>
-          <input type="password" name="new_password" placeholder="Min. 8 characters" required/>
+          <input
+            type="password"
+            name="new_password"
+            placeholder="Min. 10 characters"
+            required
+            autocomplete="new-password"
+            data-password-policy
+            data-policy-list="pw-rules-change"
+          />
         </div>
+
+        <ul class="pw-rules" id="pw-rules-change">
+          <li data-rule="length">At least 10 characters</li>
+          <li data-rule="lower">A lowercase letter</li>
+          <li data-rule="upper">An uppercase letter</li>
+          <li data-rule="digit">A number</li>
+          <li data-rule="symbol">A symbol (! @ # $ %)</li>
+        </ul>
         <div class="field">
           <label>CONFIRM NEW PASSWORD</label>
           <input type="password" name="confirm_password" placeholder="Repeat new password" required/>
@@ -85,10 +101,13 @@
     </div>
   </div>
 </div>
-
 <style>
 @media(max-width:768px){
   .account-layout > div:last-child { grid-template-columns:1fr !important; }
 }
 </style>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/password-policy.js') }}"></script>
 {% endblock %}

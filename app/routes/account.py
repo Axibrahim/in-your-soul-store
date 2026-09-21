@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from app.models import User, Address, Order, db
+from app.password_policy import validate_password
 
 account_bp = Blueprint('account', __name__)
 
@@ -63,8 +64,13 @@ def change_password():
         flash('New passwords do not match.', 'danger')
         return redirect(url_for('account.profile'))
 
-    if len(new_pass) < 8:
-        flash('Password must be at least 8 characters.', 'danger')
+    errors = validate_password(new_pass, username=current_user.username, email=current_user.email)
+    if errors:
+        flash('Password too weak: ' + ' '.join(errors), 'danger')
+        return redirect(url_for('account.profile'))
+
+    if current_user.check_password(new_pass):
+        flash('New password must be different from your current one.', 'danger')
         return redirect(url_for('account.profile'))
 
     current_user.set_password(new_pass)

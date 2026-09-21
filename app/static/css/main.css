@@ -2649,3 +2649,8 @@ tbody tr:hover {
   height: auto;
   border: 1px solid var(--border);
 }
+
+.pw-rules { list-style: none; margin: 0.25rem 0 1rem; padding: 0; font-size: 0.75rem; color: var(--text-dim); }
+.pw-rules li::before { content: '✗ '; color: #ff5252; }
+.pw-rules li.ok { color: var(--accent); }
+.pw-rules li.ok::before { content: '✓ '; color: var(--accent); }
