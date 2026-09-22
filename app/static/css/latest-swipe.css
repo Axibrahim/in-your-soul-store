@@ -117,6 +117,7 @@
   scroll-snap-type: x mandatory;
   overscroll-behavior-x: contain;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;              /* tells the browser this swipes sideways, skips its gesture-detection delay */
   scrollbar-width: none;
   outline: none;
 }
@@ -136,7 +137,9 @@
   position: relative;
   flex: 0 0 var(--ls-w);
   scroll-snap-align: center;
-  scroll-snap-stop: always;          /* one card per swipe */
+  /* no scroll-snap-stop: always — that forces a hard stop at the very next
+     card even on a fast flick, which is what made the swipe feel stuck/rough.
+     Without it, momentum carries naturally and settles on the nearest card. */
   /* --ls-d (0 = centered … 2 = far away) and --ls-s (-1 left / 1 right) are set by latest-swipe.js.
      --ls-fan / --ls-spread give the side cards a loose "fanned" look that opens up on hover. */
   transform:
