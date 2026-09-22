@@ -191,6 +191,7 @@ def apply_discount():
     return redirect(url_for(redirect_target))
 
 
+
 @cart_bp.route('/remove-discount', methods=['POST'])
 def remove_discount():
     next_page = request.form.get('next', 'cart')
