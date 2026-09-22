@@ -84,6 +84,24 @@ def save_product_image(file):
         return None
 
 
+def delete_product_image(url):
+    """Best-effort delete of a product photo from Supabase storage.
+
+    Only ever called after the DB field pointing at it has already been
+    cleared, so a failure here (network hiccup, file already gone) just
+    means an orphaned file in the bucket - never blocks the save or leaves
+    the product pointing at a missing image.
+    """
+    if not url or not supabase:
+        return
+    try:
+        filename = url.rstrip('/').split('/')[-1]
+        if filename:
+            supabase.storage.from_(BUCKET_NAME).remove([filename])
+    except Exception as e:
+        current_app.logger.warning("Supabase delete failed for %s: %s", url, e)
+
+
 @admin_bp.route('/')
 @login_required
 @admin_required
@@ -194,12 +212,17 @@ def edit_product(product_id):
             file = request.files.get(field_name)
             public_url = save_product_image(file)
             if public_url:
+                # a new upload replaces whatever was there, delete checkbox or not
+                delete_product_image(getattr(product, attr))
                 setattr(product, attr, public_url)
             elif file and file.filename:
                 flash(
                     f'{field_name}: file was not a valid image or upload failed and was skipped.',
                     'danger'
                 )
+            elif request.form.get(f'delete_{field_name}') == 'on':
+                delete_product_image(getattr(product, attr))
+                setattr(product, attr, None)
 
         # Default sizes: M, L, XL
         for size in ['M', 'L', 'XL']:

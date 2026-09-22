@@ -21,13 +21,13 @@
       <video
         class="ls-bg-media"
         src="{{ url_for('static', filename=latest_bg.video) }}"
-        {% if latest_bg.jpg %}poster="{{ url_for('static', filename=latest_bg.jpg) }}"{% endif %}
+        {% if latest_bg.image %}poster="{{ url_for('static', filename=latest_bg.image) }}"{% endif %}
         muted loop playsinline preload="metadata"
       ></video>
-    {% elif latest_bg.jpg %}
-      <img class="ls-bg-media" src="{{ url_for('static', filename=latest_bg.jpg) }}" alt=""/>
+    {% elif latest_bg.image %}
+      <img class="ls-bg-media" src="{{ url_for('static', filename=latest_bg.image) }}" alt=""/>
     {% else %}
-      <img class="ls-bg-logo" src="{{ url_for('static', filename='images/') }}" alt=""/>
+      <img class="ls-bg-logo" src="{{ url_for('static', filename='images/logo.png') }}" alt=""/>
     {% endif %}
     <div class="ls-bg-overlay"></div>
   </div>

@@ -4,6 +4,7 @@ from app.models import Product, Category, db
 from app import cache
 from datetime import datetime, timedelta
 from sqlalchemy.orm import selectinload, joinedload
+from sqlalchemy import func
 from flask_sqlalchemy.pagination import Pagination
 
 main_bp = Blueprint('main', __name__)
@@ -41,20 +42,77 @@ def _get_homepage_products():
     return all_products, categories
 
 
+def _get_top_selling_products(limit=8):
+    """Best-sellers fallback for Latest Hits: active products ranked by total
+    units sold across every non-cancelled order (any payment/status besides
+    'cancelled' still counts - an unpaid COD order still reflects real demand).
+    Products that have never sold don't show up here at all.
+    """
+    from app.models import Order, OrderItem
+    rows = (
+        db.session.query(OrderItem.product_id, func.sum(OrderItem.quantity).label('sold'))
+        .join(Order, Order.id == OrderItem.order_id)
+        .filter(Order.status != 'cancelled')
+        .group_by(OrderItem.product_id)
+        .order_by(func.sum(OrderItem.quantity).desc())
+        .limit(limit)
+        .all()
+    )
+    if not rows:
+        return []
+    ids_in_rank_order = [r.product_id for r in rows]
+    by_id = {
+        p.id: p
+        for p in Product.query.options(selectinload(Product.variants))
+        .filter(Product.id.in_(ids_in_rank_order), Product.is_active == True)
+        .all()
+    }
+    # keep best-seller rank order; skip any that got deactivated since they sold
+    return [by_id[pid] for pid in ids_in_rank_order if pid in by_id]
+
+
+LATEST_HITS_MIN = 4   # never show fewer than this (best-effort - can't exceed the catalog size)
+LATEST_HITS_MAX = 8   # hard cap either way
+
+
 @cache.memoize(timeout=30)
 def _get_latest_products():
-    """The 'Latest Hits' swipe carousel (latest_products).
+    """The 'Latest Hits' swipe carousel (latest_products), 4-8 cards.
 
-    Shows the active products ticked "Show in Latest Hits" in the admin panel
-    (that checkbox is the existing is_featured column, just relabelled - no DB
-    change). Newest first, max 8. If nothing is ticked yet it falls back to the
-    newest pieces, so the section never disappears.
+    1) Start with products ticked "Show in Latest Hits" in the admin panel
+       (that checkbox is the existing is_featured column, just relabelled -
+       no DB change).
+    2) If that gives 4 or fewer, top up with our best-selling products (by
+       units sold across all orders) until we reach 8 or run out - so a
+       couple of hand-picked pieces still get surrounded by a fuller row
+       instead of a half-empty carousel.
+    3) If we're still under 4 (e.g. a brand-new store with no orders yet),
+       top up with the newest active products as a last resort.
+    Duplicates are skipped; a product ticked *and* a best-seller only appears
+    once. Everything is capped at 8.
     """
     base = Product.query.options(selectinload(Product.variants)).filter_by(is_active=True)
-    picked = base.filter_by(is_featured=True).order_by(Product.created_at.desc()).limit(8).all()
-    if picked:
-        return picked
-    return base.order_by(Product.created_at.desc()).limit(8).all()
+
+    combined = base.filter_by(is_featured=True).order_by(Product.created_at.desc()).limit(LATEST_HITS_MAX).all()
+    seen_ids = {p.id for p in combined}
+
+    if len(combined) <= LATEST_HITS_MIN:
+        for p in _get_top_selling_products(limit=LATEST_HITS_MAX):
+            if len(combined) >= LATEST_HITS_MAX:
+                break
+            if p.id not in seen_ids:
+                combined.append(p)
+                seen_ids.add(p.id)
+
+    if len(combined) < LATEST_HITS_MIN:
+        for p in base.order_by(Product.created_at.desc()).limit(LATEST_HITS_MAX).all():
+            if len(combined) >= LATEST_HITS_MAX:
+                break
+            if p.id not in seen_ids:
+                combined.append(p)
+                seen_ids.add(p.id)
+
+    return combined[:LATEST_HITS_MAX]
 
 
 _latest_bg_cache = {}
