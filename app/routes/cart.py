@@ -81,6 +81,11 @@ def add_to_cart():
     product_id = request.form.get('product_id', type=int)
     size = request.form.get('size', '')
     quantity = request.form.get('quantity', 1, type=int)
+    if quantity < 1 or quantity > 50:
+        return jsonify({
+            'success': False,
+            'message': 'Invalid quantity'
+        }), 400
 
     if not product_id or not size:
         return jsonify({'success': False, 'message': 'Invalid request'}), 400
@@ -263,7 +268,7 @@ def checkout():
             }
             used_new_address = True
         else:
-            flash('Please provide a complete shipping address (street, building and floor are required).', 'danger')
+            flash('Please provide a complete shipping address: street, building, floor, district, and governorate are required.','danger')
             return redirect(url_for('cart.checkout'))
 
         # Validate stock
