@@ -1,8 +1,8 @@
-import sys
 from urllib.parse import urlparse
 from app.password_policy import validate_password
 from flask import (
     Blueprint,
+    current_app,
     flash,
     redirect,
     render_template,
@@ -41,7 +41,11 @@ auth_bp = Blueprint('auth', __name__)
 
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
-@limiter.limit('5 per minute')
+# AUDIT FIX (H3): limit was on the whole view (GET+POST), so loading the
+# login page counted the same as a login attempt - a legitimate user who
+# reloaded the page a couple of times while typing could get 429'd before
+# ever submitting. methods=['POST'] restricts the count to actual attempts.
+@limiter.limit('5 per minute', methods=['POST'])
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
@@ -206,17 +210,21 @@ def check_email():
 
 @auth_bp.route('/verify-email/<token>')
 def verify_email(token):
+    # AUDIT FIX (H1): these used to print() the decoded email and, via
+    # confirm_verify_token()'s own debug print in email.py, the raw token
+    # itself to stderr - which Railway captures as plain-text logs. Anyone
+    # with log access could read a live verification token straight out of
+    # the logs. Replaced with app.logger calls that never include the token,
+    # and only log the user id (not the email address) once we have one.
     email = confirm_verify_token(token)
     if not email:
-        print("[VERIFY DEBUG] Token decoding failed or token expired.", file=sys.stderr, flush=True)
+        current_app.logger.info("Email verification failed: invalid or expired token")
         flash('That verification link is invalid or expired.', 'danger')
         return redirect(url_for('auth.resend_verification'))
 
-    print(f"[VERIFY DEBUG] Decoded email: {email}", file=sys.stderr, flush=True)
-
     user = User.query.filter_by(email=email).first()
     if not user:
-        print(f"[VERIFY DEBUG] No user found in DB for email: {email}", file=sys.stderr, flush=True)
+        current_app.logger.warning("Email verification token decoded but no matching account exists")
         flash('Account not found.', 'danger')
         return redirect(url_for('auth.register'))
 
@@ -226,10 +234,10 @@ def verify_email(token):
         user.email_verified = True
         issue_session_token(user)
         db.session.commit()
-        print(f"[VERIFY DEBUG] Successfully updated user {user.id} email_verified to True", file=sys.stderr, flush=True)
-    except Exception as e:
+        current_app.logger.info("User %s verified their email", user.id)
+    except Exception:
         db.session.rollback()
-        print(f"[VERIFY DEBUG] Database commit failed: {e}", file=sys.stderr, flush=True)
+        current_app.logger.exception("Failed to mark user %s as email-verified", user.id)
         flash('Database update error. Please try again.', 'danger')
         return redirect(url_for('auth.login'))
 

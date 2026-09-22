@@ -271,15 +271,41 @@ def checkout():
             flash('Please provide a complete shipping address: street, building, floor, district, and governorate are required.','danger')
             return redirect(url_for('cart.checkout'))
 
-        # Validate stock
+        # AUDIT FIX (C2): stock used to be checked in one loop ("Validate
+        # stock") and decremented in a separate later loop, with a plain
+        # Python `variant.stock -= qty` read-then-write. Two checkouts for
+        # the last unit at the same moment could both pass the check and
+        # both decrement -> oversold stock (goes negative). This is now a
+        # single atomic, conditional UPDATE per item ("only decrement if
+        # stock is still >= quantity, right now, in the database"), done
+        # BEFORE the order is created. If any item's stock has run out
+        # since the page loaded, we roll back everything in this
+        # transaction (nothing has been committed yet) and stop - no
+        # partial order, no oversold item.
+        variants_by_item = {}
         for item_data in items:
             variant = ProductVariant.query.filter_by(
                 product_id=item_data['product'].id,
                 size=item_data['size']
             ).first()
-            if not variant or variant.stock < item_data['quantity']:
-                flash(f"Insufficient stock for {item_data['product'].name} ({item_data['size']}).", 'danger')
+            if not variant:
+                db.session.rollback()
+                flash(f"{item_data['product'].name} ({item_data['size']}) is no longer available.", 'danger')
                 return redirect(url_for('cart.checkout'))
+
+            rows_updated = db.session.query(ProductVariant).filter(
+                ProductVariant.id == variant.id,
+                ProductVariant.stock >= item_data['quantity']
+            ).update(
+                {ProductVariant.stock: ProductVariant.stock - item_data['quantity']},
+                synchronize_session=False
+            )
+            if rows_updated == 0:
+                db.session.rollback()
+                flash(f"Sorry, {item_data['product'].name} ({item_data['size']}) just sold out.", 'danger')
+                return redirect(url_for('cart.checkout'))
+
+            variants_by_item[item_data['key']] = variant
 
         # Create order
         order = Order(
@@ -320,13 +346,9 @@ def checkout():
             )
             db.session.add(saved_addr)
 
-        # Create order items and reduce stock
+        # Create order items (stock was already reduced atomically above)
         for item_data in items:
-            variant = ProductVariant.query.filter_by(
-                product_id=item_data['product'].id,
-                size=item_data['size']
-            ).first()
-            variant.stock -= item_data['quantity']
+            variant = variants_by_item[item_data['key']]
 
             order_item = OrderItem(
                 order_id=order.id,
@@ -339,7 +361,7 @@ def checkout():
                 total_price=item_data['total']
             )
             db.session.add(order_item)
-
+            
         if discount:
             discount.uses_count += 1
 
