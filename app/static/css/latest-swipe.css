@@ -100,7 +100,7 @@
   scroll-snap-type: x mandatory;
   overscroll-behavior-x: contain;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-x;              /* tells the browser this swipes sideways, skips its gesture-detection delay */
+  touch-action: pan-x pan-y;        /* both directions: horizontal swipes the carousel, vertical scrolls the page like anywhere else */
   scrollbar-width: none;
   outline: none;
 }
