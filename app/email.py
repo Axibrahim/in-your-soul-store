@@ -1,5 +1,4 @@
 import os
-import sys
 import resend
 from flask import current_app, url_for
 from itsdangerous import URLSafeTimedSerializer
@@ -25,8 +24,11 @@ def confirm_verify_token(token: str):
             salt='email-verify',
             max_age=max_age,
         )
-    except Exception as e:
-        print(f"[TOKEN ERROR] Verification failed: {e}", file=sys.stderr, flush=True)
+    except Exception:
+        # AUDIT FIX (H1): only log that a token was invalid/expired, never
+        # the exception's repr - itsdangerous exceptions can include the
+        # raw payload/signature being checked.
+        current_app.logger.info("Email verification token rejected (invalid or expired)")
         return None
 
 
@@ -40,10 +42,8 @@ def _resend_send_template(
     from_email = os.environ.get('RESEND_FROM_EMAIL')
 
     if not resend.api_key or not from_email:
-        print(
-            "[RESEND ERROR] Missing API Key or From Email environment variables.",
-            file=sys.stderr,
-            flush=True
+        current_app.logger.error(
+            "Resend not configured: RESEND_API_KEY / RESEND_FROM_EMAIL missing"
         )
         return False
 
@@ -58,26 +58,26 @@ def _resend_send_template(
         })
         return True
 
-    except Exception as e:
-        print(
-            f"[RESEND ERROR] Failed to send template email: {e}",
-            file=sys.stderr,
-            flush=True
-        )
+    except Exception:
+        current_app.logger.exception("Failed to send template email via Resend")
         return False
 
 
 def send_verification_email(to_email: str, token: str, first_name: str = "") -> bool:
     base_url = os.environ.get('BASE_URL', 'https://inyoursoul.store').rstrip('/')
-    
+
     try:
         path = url_for('auth.verify_email', token=token)
     except Exception:
         path = f"/verify-email/{token}"
 
     full_link = f"{base_url}{path}"
-    
-    print(f"[EMAIL DEBUG] Verification URL generated: {full_link}", file=sys.stderr, flush=True)
+
+    # AUDIT FIX (H1): this used to print() the full verification link -
+    # including the raw signed token - to stderr, which Railway keeps as
+    # plain-text logs anyone with log access could read and use to verify
+    # (or take over, pre-verification) any account. Never log the link/token.
+    current_app.logger.info("Sending verification email to %s", to_email)
 
     variables = {
         "verification_url": full_link,
@@ -104,8 +104,8 @@ def confirm_reset_token(token: str):
             salt='password-reset',
             max_age=max_age,
         )
-    except Exception as e:
-        print(f"[TOKEN ERROR] Reset confirmation failed: {e}", file=sys.stderr, flush=True)
+    except Exception:
+        current_app.logger.info("Password reset token rejected (invalid or expired)")
         return None
 
 
@@ -117,7 +117,10 @@ def send_reset_email(to_email: str, token: str) -> bool:
         path = f"/reset-password/{token}"
 
     link = f"{base_url}{path}"
-    print(f"[EMAIL DEBUG] Reset URL generated: {link}", file=sys.stderr, flush=True)
+
+    # AUDIT FIX (H1): same reasoning as send_verification_email() above -
+    # this link contains the raw password-reset token. Never log it.
+    current_app.logger.info("Sending password reset email to %s", to_email)
 
     body = (
         f"We received a request to reset your IN YOUR SOUL password.\n\n"
@@ -130,10 +133,8 @@ def send_reset_email(to_email: str, token: str) -> bool:
     from_email = os.environ.get('RESEND_FROM_EMAIL')
 
     if not resend.api_key or not from_email:
-        print(
-            "[RESEND ERROR] Missing API Key or From Email environment variables.",
-            file=sys.stderr,
-            flush=True
+        current_app.logger.error(
+            "Resend not configured: RESEND_API_KEY / RESEND_FROM_EMAIL missing"
         )
         return False
 
@@ -146,37 +147,32 @@ def send_reset_email(to_email: str, token: str) -> bool:
         })
         return True
 
-    except Exception as e:
-        print(
-            f"[RESEND ERROR] Failed to send reset email: {e}",
-            file=sys.stderr,
-            flush=True
-        )
+    except Exception:
+        current_app.logger.exception("Failed to send password reset email")
         return False
 
 
 def send_order_status_email(
-    to_email: str, 
-    order_id: str, 
-    order_status: str = "Processing", 
-    estimated_delivery: str = "3-5 Business Days", 
+    to_email: str,
+    order_id: str,
+    order_status: str = "Processing",
+    estimated_delivery: str = "3-5 Business Days",
     first_name: str = ""
 ) -> bool:
     base_url = os.environ.get('BASE_URL', 'https://inyoursoul.store').rstrip('/')
-    
+
     try:
         path = url_for('account.track_order', order_number=order_id)
     except Exception:
         path = f"/track-order/{order_id}"
 
-    # Keep the full valid URL with protocol intact
-    full_link = f"{base_url}{path}"
-    
     resend.api_key = os.environ.get('RESEND_API_KEY')
     from_email = os.environ.get('RESEND_ORDERS_FROM_EMAIL')
 
     if not resend.api_key or not from_email:
-        print("[RESEND ERROR] Missing API Key or From Email.", file=sys.stderr, flush=True)
+        current_app.logger.error(
+            "Resend not configured: RESEND_API_KEY / RESEND_ORDERS_FROM_EMAIL missing"
+        )
         return False
 
     variables = {
@@ -187,7 +183,7 @@ def send_order_status_email(
         "first_name": first_name or "Friend"
     }
     try:
-        response = resend.Emails.send({
+        resend.Emails.send({
             "from": from_email,
             "to": [to_email],
             "subject": f"Update on your order #{order_id}",
@@ -196,9 +192,9 @@ def send_order_status_email(
                 "variables": variables,
             },
         })
-        print(f"[RESEND SUCCESS] Order status email sent: {response}", file=sys.stderr, flush=True)
+        current_app.logger.info("Order status email sent for order %s (%s)", order_id, order_status)
         return True
 
-    except Exception as e:
-        print(f"[RESEND ERROR] Failed to send order status email: {e}", file=sys.stderr, flush=True)
+    except Exception:
+        current_app.logger.exception("Failed to send order status email for order %s", order_id)
         return False
