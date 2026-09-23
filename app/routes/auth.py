@@ -246,6 +246,8 @@ def verify_email(token):
     return redirect(url_for('main.index'))
 
 
+
+
 @auth_bp.route('/resend-verification', methods=['GET', 'POST'])
 @limiter.limit('5 per hour')
 def resend_verification():
