@@ -2423,6 +2423,16 @@ tbody tr:hover {
     padding: 4rem 0 1rem;
   }
 
+  
+  /* Any admin page using the "list + sticky side panel" layout
+     (Categories, Discounts, Edit/Add Product) - inline style sets a fixed
+     360px column which alone eats most of a phone's width and squeezes
+     the table into a sliver. !important is required: an inline style=""
+     attribute always outranks a class, media query or not. */
+  .admin-grid {
+    grid-template-columns: 1fr !important;
+  }
+
   .admin-main {
     padding: 4rem 1.25rem 2rem;
   }
