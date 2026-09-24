@@ -1,104 +1,728 @@
 {% extends 'admin/base.html' %}
+
 {% block title %}Discount Codes{% endblock %}
+
 {% block page_title %}DISCOUNT CODES{% endblock %}
 
 {% block content %}
-<div style="display:grid;grid-template-columns:1fr 360px;gap:2rem;align-items:start;">
 
-  <!-- LIST -->
+<style>
+  /* ============================================
+     DISCOUNT CODES — MOBILE LAYOUT
+     Desktop remains unchanged.
+     ============================================ */
+
+  .discounts-mobile {
+    display: none;
+  }
+
+  @media (max-width: 768px) {
+
+    /* Stack list + create form */
+    .admin-grid {
+      display: flex !important;
+      flex-direction: column;
+      gap: 1.5rem !important;
+      width: 100%;
+    }
+
+    /* Hide desktop table */
+    .discounts-table {
+      display: none;
+    }
+
+    /* Show mobile cards */
+    .discounts-mobile {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .discount-mobile-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      padding: 0.9rem;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    /* Code header */
+    .discount-mobile-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .discount-mobile-code {
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      color: var(--accent);
+      word-break: break-word;
+    }
+
+    /* Information grid */
+    .discount-mobile-info {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.7rem;
+      padding: 0.85rem 0;
+    }
+
+    .discount-mobile-info-item {
+      min-width: 0;
+    }
+
+    .discount-mobile-label {
+      display: block;
+      font-family: var(--font-display);
+      font-size: 0.5rem;
+      letter-spacing: 0.12em;
+      color: var(--text-dim);
+      margin-bottom: 0.3rem;
+    }
+
+    .discount-mobile-value {
+      font-family: var(--font-display);
+      font-size: 0.68rem;
+      color: var(--text);
+      word-break: break-word;
+    }
+
+    /* Actions */
+    .discount-mobile-actions {
+      display: flex;
+      gap: 0.5rem;
+      border-top: 1px solid var(--border);
+      padding-top: 0.75rem;
+    }
+
+    .discount-mobile-actions form {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .discount-mobile-actions .btn {
+      width: 100%;
+      justify-content: center;
+    }
+
+    /* Create code panel */
+    .discount-create-panel {
+      position: static !important;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 1.25rem !important;
+    }
+
+    .discount-create-panel .field {
+      width: 100%;
+    }
+
+    .discount-create-panel input,
+    .discount-create-panel select {
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+  }
+
+  @media (max-width: 420px) {
+
+    .discount-mobile-card {
+      padding: 0.75rem;
+    }
+
+    .discount-mobile-info {
+      gap: 0.55rem;
+    }
+
+    .discount-mobile-actions {
+      gap: 0.4rem;
+    }
+
+    .discount-mobile-actions .btn {
+      font-size: 0.55rem;
+      padding-left: 0.45rem;
+      padding-right: 0.45rem;
+    }
+
+    .discount-create-panel {
+      padding: 1rem !important;
+    }
+  }
+</style>
+
+
+<div
+  style="
+    display:grid;
+    grid-template-columns:1fr 360px;
+    gap:2rem;
+    align-items:start;
+  "
+  class="admin-grid"
+>
+
+
+  <!-- ============================================
+       DISCOUNT LIST
+       ============================================ -->
+
   <div>
-    <h2 style="font-size:1.25rem;margin-bottom:1.5rem;">All Codes</h2>
+
+    <h2 style="font-size:1.25rem;margin-bottom:1.5rem;">
+      All Codes
+    </h2>
+
+
     {% if codes %}
-    <div style="background:var(--panel);border:1px solid var(--border);overflow-x:auto;">
+
+
+    <!-- DESKTOP TABLE -->
+
+    <div
+      class="table-wrap discounts-table"
+      style="
+        background:var(--panel);
+        border:1px solid var(--border);
+      "
+    >
+
       <table>
+
         <thead>
           <tr>
-            <th>CODE</th><th>DISCOUNT</th><th>MIN ORDER</th><th>USES</th><th>EXPIRES</th><th>STATUS</th><th></th>
+            <th>CODE</th>
+            <th>DISCOUNT</th>
+            <th>MIN ORDER</th>
+            <th>USES</th>
+            <th>EXPIRES</th>
+            <th>STATUS</th>
+            <th></th>
           </tr>
         </thead>
+
+
         <tbody>
+
           {% for c in codes %}
+
           <tr>
-            <td style="font-family:var(--font-display);font-size:0.85rem;color:var(--accent);">{{ c.code }}</td>
-            <td style="font-size:0.82rem;">
-              {% if c.discount_type == 'percent' %}{{ c.value|int }}% OFF{% else %}{{ "%.0f"|format(c.value) }} EGP OFF{% endif %}
+
+            <!-- CODE -->
+            <td style="
+              font-family:var(--font-display);
+              font-size:0.85rem;
+              color:var(--accent);
+            ">
+              {{ c.code }}
             </td>
-            <td style="font-size:0.78rem;color:var(--text-dim);">{{ "%.0f"|format(c.min_subtotal) }} EGP</td>
-            <td style="font-size:0.78rem;color:var(--text-dim);">{{ c.uses_count }}{% if c.max_uses %} / {{ c.max_uses }}{% endif %}</td>
-            <td style="font-size:0.78rem;color:var(--text-dim);">{{ c.expires_at.strftime('%Y-%m-%d') if c.expires_at else 'Never' }}</td>
-            <td>
-              {% if c.is_active %}
-              <span class="badge badge--success">ACTIVE</span>
+
+
+            <!-- DISCOUNT -->
+            <td style="font-size:0.82rem;">
+
+              {% if c.discount_type == 'percent' %}
+                {{ c.value|int }}% OFF
               {% else %}
-              <span class="badge badge--danger">OFF</span>
+                {{ "%.0f"|format(c.value) }} EGP OFF
+              {% endif %}
+
+            </td>
+
+
+            <!-- MIN ORDER -->
+            <td style="
+              font-size:0.78rem;
+              color:var(--text-dim);
+            ">
+              {{ "%.0f"|format(c.min_subtotal) }} EGP
+            </td>
+
+
+            <!-- USES -->
+            <td style="
+              font-size:0.78rem;
+              color:var(--text-dim);
+            ">
+              {{ c.uses_count }}
+              {% if c.max_uses %}
+                / {{ c.max_uses }}
               {% endif %}
             </td>
-            <td style="white-space:nowrap;">
-            <form method="POST" action="{{ url_for('admin.toggle_discount', discount_id=c.id) }}" style="display:inline;">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-              <button type="submit" class="btn btn--ghost btn--sm"><span>{{ 'DISABLE' if c.is_active else 'ENABLE' }}</span></button>
-            </form>
-            <form method="POST" action="{{ url_for('admin.delete_discount', discount_id=c.id) }}" style="display:inline;" data-confirm="Delete this discount code?">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-              <button type="submit" class="btn btn--danger btn--sm"><span>DELETE</span></button>
-            </form>
+
+
+            <!-- EXPIRES -->
+            <td style="
+              font-size:0.78rem;
+              color:var(--text-dim);
+            ">
+              {{ c.expires_at.strftime('%Y-%m-%d') if c.expires_at else 'Never' }}
             </td>
+
+
+            <!-- STATUS -->
+            <td>
+
+              {% if c.is_active %}
+
+              <span class="badge badge--success">
+                ACTIVE
+              </span>
+
+              {% else %}
+
+              <span class="badge badge--danger">
+                OFF
+              </span>
+
+              {% endif %}
+
+            </td>
+
+
+            <!-- ACTIONS -->
+            <td style="white-space:nowrap;">
+
+              <form
+                method="POST"
+                action="{{ url_for('admin.toggle_discount', discount_id=c.id) }}"
+                style="display:inline;"
+              >
+
+                <input
+                  type="hidden"
+                  name="csrf_token"
+                  value="{{ csrf_token() }}"
+                />
+
+                <button
+                  type="submit"
+                  class="btn btn--ghost btn--sm"
+                >
+                  <span>
+                    {{ 'DISABLE' if c.is_active else 'ENABLE' }}
+                  </span>
+                </button>
+
+              </form>
+
+
+              <form
+                method="POST"
+                action="{{ url_for('admin.delete_discount', discount_id=c.id) }}"
+                style="display:inline;"
+                data-confirm="Delete this discount code?"
+              >
+
+                <input
+                  type="hidden"
+                  name="csrf_token"
+                  value="{{ csrf_token() }}"
+                />
+
+                <button
+                  type="submit"
+                  class="btn btn--danger btn--sm"
+                >
+                  <span>DELETE</span>
+                </button>
+
+              </form>
+
+            </td>
+
           </tr>
+
           {% endfor %}
+
         </tbody>
+
       </table>
+
     </div>
+
+
+    <!-- ============================================
+         MOBILE DISCOUNT CARDS
+         ============================================ -->
+
+    <div class="discounts-mobile">
+
+      {% for c in codes %}
+
+      <div class="discount-mobile-card">
+
+
+        <!-- CODE + STATUS -->
+
+        <div class="discount-mobile-header">
+
+          <div class="discount-mobile-code">
+            {{ c.code }}
+          </div>
+
+          {% if c.is_active %}
+
+          <span class="badge badge--success">
+            ACTIVE
+          </span>
+
+          {% else %}
+
+          <span class="badge badge--danger">
+            OFF
+          </span>
+
+          {% endif %}
+
+        </div>
+
+
+        <!-- INFORMATION -->
+
+        <div class="discount-mobile-info">
+
+
+          <!-- DISCOUNT -->
+
+          <div class="discount-mobile-info-item">
+
+            <span class="discount-mobile-label">
+              DISCOUNT
+            </span>
+
+            <span class="discount-mobile-value">
+
+              {% if c.discount_type == 'percent' %}
+                {{ c.value|int }}% OFF
+              {% else %}
+                {{ "%.0f"|format(c.value) }} EGP OFF
+              {% endif %}
+
+            </span>
+
+          </div>
+
+
+          <!-- MIN ORDER -->
+
+          <div class="discount-mobile-info-item">
+
+            <span class="discount-mobile-label">
+              MIN ORDER
+            </span>
+
+            <span class="discount-mobile-value">
+              {{ "%.0f"|format(c.min_subtotal) }} EGP
+            </span>
+
+          </div>
+
+
+          <!-- USES -->
+
+          <div class="discount-mobile-info-item">
+
+            <span class="discount-mobile-label">
+              USES
+            </span>
+
+            <span class="discount-mobile-value">
+
+              {{ c.uses_count }}
+
+              {% if c.max_uses %}
+                / {{ c.max_uses }}
+              {% endif %}
+
+            </span>
+
+          </div>
+
+
+          <!-- EXPIRES -->
+
+          <div class="discount-mobile-info-item">
+
+            <span class="discount-mobile-label">
+              EXPIRES
+            </span>
+
+            <span class="discount-mobile-value">
+              {{ c.expires_at.strftime('%Y-%m-%d') if c.expires_at else 'Never' }}
+            </span>
+
+          </div>
+
+
+        </div>
+
+
+        <!-- ACTIONS -->
+
+        <div class="discount-mobile-actions">
+
+
+          <!-- ENABLE / DISABLE -->
+
+          <form
+            method="POST"
+            action="{{ url_for('admin.toggle_discount', discount_id=c.id) }}"
+          >
+
+            <input
+              type="hidden"
+              name="csrf_token"
+              value="{{ csrf_token() }}"
+            />
+
+            <button
+              type="submit"
+              class="btn btn--ghost btn--sm"
+            >
+              <span>
+                {{ 'DISABLE' if c.is_active else 'ENABLE' }}
+              </span>
+            </button>
+
+          </form>
+
+
+          <!-- DELETE -->
+
+          <form
+            method="POST"
+            action="{{ url_for('admin.delete_discount', discount_id=c.id) }}"
+            data-confirm="Delete this discount code?"
+          >
+
+            <input
+              type="hidden"
+              name="csrf_token"
+              value="{{ csrf_token() }}"
+            />
+
+            <button
+              type="submit"
+              class="btn btn--danger btn--sm"
+            >
+              <span>DELETE</span>
+            </button>
+
+          </form>
+
+
+        </div>
+
+      </div>
+
+      {% endfor %}
+
+    </div>
+
+
     {% else %}
-    <div class="empty-state" style="padding:3rem;border:1px solid var(--border);background:var(--panel);">
+
+
+    <!-- EMPTY STATE -->
+
+    <div
+      class="empty-state"
+      style="
+        padding:3rem;
+        border:1px solid var(--border);
+        background:var(--panel);
+      "
+    >
       <h3>NO DISCOUNT CODES YET</h3>
     </div>
+
+
     {% endif %}
+
   </div>
 
-  <!-- ADD -->
-  <div style="background:var(--panel);border:1px solid var(--border);padding:2rem;position:sticky;top:4.5rem;">
-    <div style="font-family:var(--font-display);font-size:0.65rem;letter-spacing:0.2em;color:var(--text-dim);margin-bottom:1.5rem;">CREATE CODE</div>
-    <form method="POST" action="{{ url_for('admin.add_discount') }}">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+  <!-- ============================================
+       CREATE DISCOUNT CODE
+       ============================================ -->
+
+  <div
+    class="discount-create-panel"
+    style="
+      background:var(--panel);
+      border:1px solid var(--border);
+      padding:2rem;
+      position:sticky;
+      top:4.5rem;
+    "
+  >
+
+    <div
+      style="
+        font-family:var(--font-display);
+        font-size:0.65rem;
+        letter-spacing:0.2em;
+        color:var(--text-dim);
+        margin-bottom:1.5rem;
+      "
+    >
+      CREATE CODE
+    </div>
+
+
+    <form
+      method="POST"
+      action="{{ url_for('admin.add_discount') }}"
+    >
+
+      <input
+        type="hidden"
+        name="csrf_token"
+        value="{{ csrf_token() }}"
+      />
+
+
+      <!-- CODE -->
 
       <div class="field">
+
         <label>CODE</label>
-        <input type="text" name="code" placeholder="WELCOME10" required style="text-transform:uppercase;"/>
+
+        <input
+          type="text"
+          name="code"
+          placeholder="WELCOME10"
+          required
+          style="text-transform:uppercase;"
+        />
+
       </div>
 
+
+      <!-- TYPE -->
+
       <div class="field">
+
         <label>TYPE</label>
+
         <select name="discount_type" required>
-          <option value="percent">Percentage (%)</option>
-          <option value="fixed">Fixed amount (EGP)</option>
+
+          <option value="percent">
+            Percentage (%)
+          </option>
+
+          <option value="fixed">
+            Fixed amount (EGP)
+          </option>
+
         </select>
+
       </div>
 
+
+      <!-- VALUE -->
+
       <div class="field">
+
         <label>VALUE</label>
-        <input type="text" inputmode="decimal" pattern="[0-9]*\.?[0-9]*" name="value" placeholder="10" required
-               oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');"/>
-      </div>
-      
-      <div class="field">
-        <label>MINIMUM ORDER (EGP) <span style="color:var(--muted);">optional</span></label>
-        <input type="text" inputmode="decimal" pattern="[0-9]*\.?[0-9]*" name="min_subtotal" placeholder="0"
-               oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');"/>
+
+        <input
+          type="text"
+          inputmode="decimal"
+          pattern="[0-9]*\.?[0-9]*"
+          name="value"
+          placeholder="10"
+          required
+          oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');"
+        />
+
       </div>
 
-      <div class="field">
-        <label>MAX USES <span style="color:var(--muted);">optional, blank = unlimited</span></label>
-        <input type="text" inputmode="decimal" pattern="[0-9]*\.?[0-9]*" name="max_uses" placeholder="e.g. 100"
-               oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');"/>
-      </div>
+
+      <!-- MINIMUM ORDER -->
 
       <div class="field">
-        <label>EXPIRES IN (DAYS) <span style="color:var(--muted);">optional, blank = never</span></label>
-        <input type="number" name="expires_days" placeholder="e.g. 30"/>
+
+        <label>
+          MINIMUM ORDER (EGP)
+          <span style="color:var(--muted);">
+            optional
+          </span>
+        </label>
+
+        <input
+          type="text"
+          inputmode="decimal"
+          pattern="[0-9]*\.?[0-9]*"
+          name="min_subtotal"
+          placeholder="0"
+          oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');"
+        />
+
       </div>
 
-      <button type="submit" class="btn btn--primary btn--full"><span>CREATE CODE</span></button>
+
+      <!-- MAX USES -->
+
+      <div class="field">
+
+        <label>
+          MAX USES
+          <span style="color:var(--muted);">
+            optional, blank = unlimited
+          </span>
+        </label>
+
+        <input
+          type="text"
+          inputmode="decimal"
+          pattern="[0-9]*\.?[0-9]*"
+          name="max_uses"
+          placeholder="e.g. 100"
+          oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');"
+        />
+
+      </div>
+
+
+      <!-- EXPIRATION -->
+
+      <div class="field">
+
+        <label>
+          EXPIRES IN (DAYS)
+          <span style="color:var(--muted);">
+            optional, blank = never
+          </span>
+        </label>
+
+        <input
+          type="number"
+          name="expires_days"
+          placeholder="e.g. 30"
+        />
+
+      </div>
+
+
+      <!-- SUBMIT -->
+
+      <button
+        type="submit"
+        class="btn btn--primary btn--full"
+      >
+        <span>CREATE CODE</span>
+      </button>
+
     </form>
+
   </div>
+
 </div>
+
 {% endblock %}

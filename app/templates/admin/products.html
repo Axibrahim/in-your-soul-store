@@ -1,16 +1,193 @@
 {% extends 'admin/base.html' %}
+
 {% block title %}Products{% endblock %}
+
 {% block page_title %}PRODUCTS{% endblock %}
 
 {% block content %}
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem;flex-wrap:wrap;gap:1rem;">
-  <h2 style="font-size:1.25rem;">All Products <span style="color:var(--text-dim);font-size:0.7em;">({{ products|length }})</span></h2>
-  <a href="{{ url_for('admin.add_product') }}" class="btn btn--primary"><span>+ ADD PRODUCT</span></a>
+
+<style>
+  /* ============================================
+     PRODUCTS PAGE — MOBILE LAYOUT
+     Desktop table remains unchanged.
+     ============================================ */
+
+  .products-mobile {
+    display: none;
+  }
+
+  @media (max-width: 768px) {
+
+    /* Hide desktop table */
+    .products-table {
+      display: none;
+    }
+
+    /* Mobile product cards */
+    .products-mobile {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .product-mobile-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      padding: 0.9rem;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    /* Product header */
+    .product-mobile-header {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      padding-bottom: 0.8rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .product-mobile-image {
+      width: 52px;
+      height: 64px;
+      flex: 0 0 52px;
+      object-fit: cover;
+      border: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    .product-mobile-image-placeholder {
+      width: 52px;
+      height: 64px;
+      flex: 0 0 52px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .product-mobile-name {
+      font-family: var(--font-display);
+      font-size: 0.78rem;
+      color: var(--text);
+      line-height: 1.3;
+      word-break: break-word;
+    }
+
+    .product-mobile-id {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      margin-top: 0.2rem;
+    }
+
+    /* Information grid */
+    .product-mobile-info {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.65rem;
+      padding: 0.85rem 0;
+    }
+
+    .product-mobile-info-item {
+      min-width: 0;
+    }
+
+    .product-mobile-label {
+      display: block;
+      font-family: var(--font-display);
+      font-size: 0.5rem;
+      letter-spacing: 0.12em;
+      color: var(--text-dim);
+      margin-bottom: 0.3rem;
+    }
+
+    .product-mobile-value {
+      font-family: var(--font-display);
+      font-size: 0.7rem;
+      color: var(--text);
+      word-break: break-word;
+    }
+
+    /* Actions */
+    .product-mobile-actions {
+      display: flex;
+      gap: 0.5rem;
+      border-top: 1px solid var(--border);
+      padding-top: 0.75rem;
+    }
+
+    .product-mobile-actions .btn {
+      flex: 1;
+      min-width: 0;
+      justify-content: center;
+    }
+  }
+
+  @media (max-width: 420px) {
+
+    .product-mobile-card {
+      padding: 0.75rem;
+    }
+
+    .product-mobile-header {
+      gap: 0.65rem;
+    }
+
+    .product-mobile-info {
+      gap: 0.55rem;
+    }
+
+    .product-mobile-actions .btn {
+      font-size: 0.55rem;
+      padding-left: 0.5rem;
+      padding-right: 0.5rem;
+    }
+  }
+</style>
+
+
+<!-- ============================================
+     PAGE HEADER
+     ============================================ -->
+
+<div style="
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:2rem;
+  flex-wrap:wrap;
+  gap:1rem;
+">
+
+  <h2 style="font-size:1.25rem;">
+    All Products
+    <span style="color:var(--text-dim);font-size:0.7em;">
+      ({{ products|length }})
+    </span>
+  </h2>
+
+  <a href="{{ url_for('admin.add_product') }}" class="btn btn--primary">
+    <span>+ ADD PRODUCT</span>
+  </a>
+
 </div>
 
+
 {% if products %}
-<div class="table-wrap" style="background:var(--panel);border:1px solid var(--border);">
+
+
+<!-- ============================================
+     DESKTOP TABLE
+     ============================================ -->
+
+<div
+  class="table-wrap products-table"
+  style="background:var(--panel);border:1px solid var(--border);"
+>
+
   <table>
+
     <thead>
       <tr>
         <th>PRODUCT</th>
@@ -22,73 +199,452 @@
         <th>ACTIONS</th>
       </tr>
     </thead>
+
     <tbody>
+
       {% for product in products %}
+
+      {% set stock = product.get_total_stock() %}
+
       <tr>
+
+        <!-- PRODUCT -->
         <td>
           <div style="display:flex;align-items:center;gap:1rem;">
+
             {% if product.image_url %}
-            <img src="{{ product.image_url }}" alt="{{ product.name }}" style="width:48px;height:60px;object-fit:cover;border:1px solid var(--border);"/>
+
+            <img
+              src="{{ product.image_url }}"
+              alt="{{ product.name }}"
+              style="
+                width:48px;
+                height:60px;
+                object-fit:cover;
+                border:1px solid var(--border);
+              "
+            />
+
             {% else %}
-            <div style="width:48px;height:60px;background:var(--bg);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;">
-              <span style="font-size:0.5rem;color:var(--muted);font-family:var(--font-display);">IMG</span>
+
+            <div style="
+              width:48px;
+              height:60px;
+              background:var(--bg);
+              border:1px solid var(--border);
+              display:flex;
+              align-items:center;
+              justify-content:center;
+            ">
+              <span style="
+                font-size:0.5rem;
+                color:var(--muted);
+                font-family:var(--font-display);
+              ">
+                IMG
+              </span>
             </div>
+
             {% endif %}
+
             <div>
-              <div style="font-family:var(--font-display);font-size:0.8rem;color:var(--text);">{{ product.name }}</div>
-              <div style="font-size:0.72rem;color:var(--text-dim);">ID: {{ product.id }}</div>
+
+              <div style="
+                font-family:var(--font-display);
+                font-size:0.8rem;
+                color:var(--text);
+              ">
+                {{ product.name }}
+              </div>
+
+              <div style="
+                font-size:0.72rem;
+                color:var(--text-dim);
+              ">
+                ID: {{ product.id }}
+              </div>
+
             </div>
+
           </div>
         </td>
-        <td style="font-size:0.8rem;color:var(--text-dim);">{{ product.category.name if product.category else '—' }}</td>
-        <td style="font-family:var(--font-display);font-size:0.85rem;">{{ "%.0f"|format(product.price) }} EGP</td>
-<td>
+
+
+        <!-- CATEGORY -->
+        <td style="
+          font-size:0.8rem;
+          color:var(--text-dim);
+        ">
+          {{ product.category.name if product.category else '—' }}
+        </td>
+
+
+        <!-- PRICE -->
+        <td style="
+          font-family:var(--font-display);
+          font-size:0.85rem;
+        ">
+          {{ "%.0f"|format(product.price) }} EGP
+        </td>
+
+
+        <!-- STOCK -->
+        <td>
+
+          <span class="
+            product-stock
+            {% if stock == 0 %}
+              product-stock--empty
+            {% elif stock <= 5 %}
+              product-stock--low
+            {% else %}
+              product-stock--good
+            {% endif %}
+          ">
+            {{ stock }}
+          </span>
+
+        </td>
+
+
+        <!-- LATEST HITS -->
+        <td>
+
+          {% if product.is_featured %}
+
+          <span class="badge badge--success">
+            YES
+          </span>
+
+          {% else %}
+
+          <span class="badge badge--muted">
+            NO
+          </span>
+
+          {% endif %}
+
+        </td>
+
+
+        <!-- STATUS -->
+        <td>
+
+          <span class="
+            badge
+            {% if product.is_active %}
+              badge--success
+            {% else %}
+              badge--muted
+            {% endif %}
+            product-status-badge
+          ">
+
+            {% if product.is_active %}
+              ACTIVE
+            {% else %}
+              INACTIVE
+            {% endif %}
+
+          </span>
+
+        </td>
+
+
+        <!-- ACTIONS -->
+        <td>
+
+          <div style="
+            display:flex;
+            gap:0.5rem;
+            flex-wrap:wrap;
+          ">
+
+            <a
+              href="{{ url_for('admin.edit_product', product_id=product.id) }}"
+              class="btn btn--sm btn--ghost"
+            >
+              <span>EDIT</span>
+            </a>
+
+            <button
+              class="
+                btn
+                btn--sm
+                toggle-product-btn
+                {% if not product.is_active %}
+                  btn--primary
+                {% else %}
+                  btn--danger
+                {% endif %}
+              "
+              data-id="{{ product.id }}"
+            >
+
+              <span>
+                {% if product.is_active %}
+                  DEACTIVATE
+                {% else %}
+                  ACTIVATE
+                {% endif %}
+              </span>
+
+            </button>
+
+          </div>
+
+        </td>
+
+      </tr>
+
+      {% endfor %}
+
+    </tbody>
+
+  </table>
+
+</div>
+
+
+<!-- ============================================
+     MOBILE PRODUCT CARDS
+     ============================================ -->
+
+<div class="products-mobile">
+
+  {% for product in products %}
+
   {% set stock = product.get_total_stock() %}
 
-  <span
-    class="product-stock
-      {% if stock == 0 %}
-        product-stock--empty
-      {% elif stock <= 5 %}
-        product-stock--low
+  <div class="product-mobile-card">
+
+    <!-- PRODUCT HEADER -->
+    <div class="product-mobile-header">
+
+      {% if product.image_url %}
+
+      <img
+        class="product-mobile-image"
+        src="{{ product.image_url }}"
+        alt="{{ product.name }}"
+      />
+
       {% else %}
-        product-stock--good
-      {% endif %}"
-  >
-    {{ stock }}
-  </span>
-</td>
-        <td>
-          {% if product.is_featured %}
-          <span class="badge badge--success">YES</span>
+
+      <div class="product-mobile-image-placeholder">
+        <span style="
+          font-size:0.5rem;
+          color:var(--muted);
+          font-family:var(--font-display);
+        ">
+          IMG
+        </span>
+      </div>
+
+      {% endif %}
+
+
+      <div style="min-width:0;flex:1;">
+
+        <div class="product-mobile-name">
+          {{ product.name }}
+        </div>
+
+        <div class="product-mobile-id">
+          ID: {{ product.id }}
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- PRODUCT INFORMATION -->
+    <div class="product-mobile-info">
+
+      <!-- CATEGORY -->
+      <div class="product-mobile-info-item">
+
+        <span class="product-mobile-label">
+          CATEGORY
+        </span>
+
+        <span class="product-mobile-value">
+          {{ product.category.name if product.category else '—' }}
+        </span>
+
+      </div>
+
+
+      <!-- PRICE -->
+      <div class="product-mobile-info-item">
+
+        <span class="product-mobile-label">
+          PRICE
+        </span>
+
+        <span class="product-mobile-value">
+          {{ "%.0f"|format(product.price) }} EGP
+        </span>
+
+      </div>
+
+
+      <!-- STOCK -->
+      <div class="product-mobile-info-item">
+
+        <span class="product-mobile-label">
+          STOCK
+        </span>
+
+        <span class="
+          product-stock
+          {% if stock == 0 %}
+            product-stock--empty
+          {% elif stock <= 5 %}
+            product-stock--low
           {% else %}
-          <span class="badge badge--muted">NO</span>
+            product-stock--good
           {% endif %}
-        </td>
-        <td>
-          <span class="badge {% if product.is_active %}badge--success{% else %}badge--muted{% endif %} product-status-badge">
-            {% if product.is_active %}ACTIVE{% else %}INACTIVE{% endif %}
-          </span>
-        </td>
-        <td>
-          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
-            <a href="{{ url_for('admin.edit_product', product_id=product.id) }}" class="btn btn--sm btn--ghost"><span>EDIT</span></a>
-            <button class="btn btn--sm toggle-product-btn {% if not product.is_active %}btn--primary{% else %}btn--danger{% endif %}" data-id="{{ product.id }}">
-              <span>{% if product.is_active %}DEACTIVATE{% else %}ACTIVATE{% endif %}</span>
-            </button>
-          </div>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+        ">
+          {{ stock }}
+        </span>
+
+      </div>
+
+
+      <!-- LATEST HITS -->
+      <div class="product-mobile-info-item">
+
+        <span class="product-mobile-label">
+          LATEST HITS
+        </span>
+
+        {% if product.is_featured %}
+
+        <span class="badge badge--success">
+          YES
+        </span>
+
+        {% else %}
+
+        <span class="badge badge--muted">
+          NO
+        </span>
+
+        {% endif %}
+
+      </div>
+
+
+      <!-- STATUS -->
+      <div class="product-mobile-info-item">
+
+        <span class="product-mobile-label">
+          STATUS
+        </span>
+
+        <span class="
+          badge
+          {% if product.is_active %}
+            badge--success
+          {% else %}
+            badge--muted
+          {% endif %}
+          product-status-badge
+        ">
+
+          {% if product.is_active %}
+            ACTIVE
+          {% else %}
+            INACTIVE
+          {% endif %}
+
+        </span>
+
+      </div>
+
+    </div>
+
+
+    <!-- ACTIONS -->
+    <div class="product-mobile-actions">
+
+      <a
+        href="{{ url_for('admin.edit_product', product_id=product.id) }}"
+        class="btn btn--sm btn--ghost"
+      >
+        <span>EDIT</span>
+      </a>
+
+
+      <button
+        class="
+          btn
+          btn--sm
+          toggle-product-btn
+          {% if not product.is_active %}
+            btn--primary
+          {% else %}
+            btn--danger
+          {% endif %}
+        "
+        data-id="{{ product.id }}"
+      >
+
+        <span>
+          {% if product.is_active %}
+            DEACTIVATE
+          {% else %}
+            ACTIVATE
+          {% endif %}
+        </span>
+
+      </button>
+
+    </div>
+
+  </div>
+
+  {% endfor %}
+
 </div>
+
+
 {% else %}
-<div class="empty-state" style="padding:6rem 0;border:1px solid var(--border);background:var(--panel);">
+
+
+<!-- ============================================
+     EMPTY STATE
+     ============================================ -->
+
+<div
+  class="empty-state"
+  style="
+    padding:6rem 0;
+    border:1px solid var(--border);
+    background:var(--panel);
+  "
+>
+
   <div class="empty-icon">📦</div>
+
   <h3>NO PRODUCTS YET</h3>
-  <p style="margin-bottom:2rem;">Add your first product to get started.</p>
-  <a href="{{ url_for('admin.add_product') }}" class="btn btn--primary"><span>+ ADD PRODUCT</span></a>
+
+  <p style="margin-bottom:2rem;">
+    Add your first product to get started.
+  </p>
+
+  <a
+    href="{{ url_for('admin.add_product') }}"
+    class="btn btn--primary"
+  >
+    <span>+ ADD PRODUCT</span>
+  </a>
+
 </div>
+
+
 {% endif %}
+
 {% endblock %}

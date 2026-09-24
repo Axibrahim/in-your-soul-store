@@ -168,6 +168,11 @@ a:hover {
   align-items: center;
   justify-content: space-between;
   gap: 2rem;
+  /* Outrank .nav-mobile-backdrop (999) so the top row - logo, cart,
+     burger - stays crisp above the blur instead of getting blurred
+     along with the page behind it. */
+  position: relative;
+  z-index: 1001;
 }
 
 .nav-logo {
@@ -321,39 +326,131 @@ a:hover {
 }
 
 .nav-mobile {
-  display: none;
+  display: flex;
   flex-direction: column;
   position: absolute;
   top: var(--nav-height);
   left: 0;
   right: 0;
   width: 100%;
-  background: rgba(4, 8, 4, 0.98);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  /* Must outrank .nav-mobile-backdrop's z-index (999), or the backdrop's
+     blur ends up painting over this panel instead of just the page behind it. */
+  z-index: 1000;
+  /* Fully opaque - no reliance on alpha here, so it never turns see-through mid-animation */
+  background: var(--bg);
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
   padding: 1.5rem 2rem;
   gap: 1.5rem;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+  /* Only the slide/scale animates - opacity is NOT animated on this container,
+     since fading the whole panel also fades its background, letting whatever
+     is behind (and its blur) bleed through the text. */
+  transform-origin: top;
+  transform: translateY(-10px) scaleY(0.94);
+  transition:
+    transform 0.36s cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 0s linear 0.36s;
+}
+
+/* Scanline accent that sweeps in across the top border on open */
+.nav-mobile::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  transform: scaleX(0);
+  opacity: 0;
+  transition: transform 0.5s ease 0.08s, opacity 0.5s ease 0.08s;
 }
 
 .nav-mobile.open {
-  display: flex;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0) scaleY(1);
+  transition: transform 0.36s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.nav-mobile.open::before {
+  transform: scaleX(1);
+  opacity: 1;
 }
 
 .nav-mobile-link {
   font-family: var(--font-display);
-  font-size: 0.9rem;
+  font-size: 0.95rem;
+  font-weight: 700;
   letter-spacing: 0.1em;
-  color: var(--text-dim);
-  transition: var(--transition);
-  padding: 0.5rem 0;
+  color: var(--text);
+  transition: color 0.2s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease;
+  padding: 0.65rem 0;
   border-bottom: 1px solid var(--border);
+  opacity: 0;
+  transform: translateX(-14px);
+}
+
+/* Staggered entrance - each link lags a beat behind the last */
+.nav-mobile-link:nth-child(1) { transition-delay: 0.05s; }
+.nav-mobile-link:nth-child(2) { transition-delay: 0.1s; }
+.nav-mobile-link:nth-child(3) { transition-delay: 0.15s; }
+.nav-mobile-link:nth-child(4) { transition-delay: 0.2s; }
+.nav-mobile-link:nth-child(5) { transition-delay: 0.25s; }
+.nav-mobile-link:nth-child(6) { transition-delay: 0.3s; }
+
+.nav-mobile.open .nav-mobile-link {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.nav-mobile:not(.open) .nav-mobile-link {
+  transition-delay: 0s !important;
 }
 
 .nav-mobile-link:hover {
   color: var(--accent);
+  transform: translateX(4px);
+}
+
+.nav-mobile-link:active {
+  color: var(--accent);
+}
+
+/* Dim + blur the page behind the open menu, click to close */
+.nav-mobile-backdrop {
+  position: fixed;
+  inset: 0;
+  /* No top offset - covers the nav bar too, so the top row (which is
+     transparent until you scroll) shows the same blurred backdrop as
+     everything else instead of a sharp seam. */
+  background: rgba(4, 8, 4, 0.6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 999;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.3s ease, visibility 0s linear 0.3s;
+}
+
+.nav-mobile-backdrop.open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity 0.3s ease;
+}
+
+body.nav-open {
+  /* overflow:hidden alone doesn't reliably block scroll/rubber-banding
+     on iOS Safari - pinning the body in place is what actually holds it. */
+  position: fixed;
+  width: 100%;
+  overflow: hidden;
 }
 
 /* ============================================ BUTTONS */
@@ -2417,13 +2514,82 @@ tbody tr:hover {
     grid-template-columns: 1fr;
   }
 
+  /* Sidebar becomes a toggleable dropdown panel (opened via the topbar's
+     burger button) instead of always being on-screen — a horizontally
+     squeezed strip of icons/labels was unreadable, so it's hidden by
+     default and slides down as a full-width list when opened. */
   .admin-sidebar {
-    position: static;
+    position: fixed;
+    top: 56px;
+    left: 0;
+    right: 0;
     height: auto;
-    padding: 4rem 0 1rem;
+    max-height: calc(100vh - 56px);
+    width: 100%;
+    z-index: 150;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+    padding: 0.5rem 0 1rem;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    visibility: hidden;
+    pointer-events: none;
+    transform-origin: top;
+    transform: translateY(-8px) scaleY(0.97);
+    transition:
+      transform 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+      visibility 0s linear 0.32s;
   }
 
-  
+  .admin-sidebar.open {
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0) scaleY(1);
+    transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Brand/lockup block - redundant with the fixed topbar title on mobile */
+  .admin-sidebar > div:first-child {
+    display: none;
+  }
+
+  .admin-nav-item {
+    padding: 0.9rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .admin-sidebar > div:last-child {
+    border-top: 1px solid var(--border);
+    margin-top: 0;
+    padding: 0.5rem 1.5rem;
+  }
+
+  /* Dim + blur the page behind the open dropdown, tap to close */
+  .admin-sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    top: 56px;
+    background: rgba(4, 8, 4, 0.55);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    z-index: 140;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.3s ease, visibility 0s linear 0.3s;
+  }
+
+  .admin-sidebar-backdrop.open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: opacity 0.3s ease;
+  }
+
   /* Any admin page using the "list + sticky side panel" layout
      (Categories, Discounts, Edit/Add Product) - inline style sets a fixed
      360px column which alone eats most of a phone's width and squeezes
@@ -2433,8 +2599,36 @@ tbody tr:hover {
     grid-template-columns: 1fr !important;
   }
 
+  /* The "list + sticky side panel" pages (Discounts, Categories,
+     Add/Edit Product) pin that panel with position:sticky for the
+     desktop 2-column layout. Once admin-grid collapses to 1 column
+     above, it's just a normal stacked block - sticky would make it
+     pin itself under the fixed topbar mid-scroll instead. */
+  .admin-grid > div:last-child {
+    position: static !important;
+  }
+
+  /* Dashboard stat cards: force 2-up instead of the auto-fit inline style */
+  .stat-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
   .admin-main {
     padding: 4rem 1.25rem 2rem;
+    overflow-x: hidden;
+  }
+
+    /* Products table: drop the least essential columns on phones instead
+     of forcing a 7-column horizontal scroll for every row. */
+  .products-table th:nth-child(2),
+  .products-table td:nth-child(2) {
+    display: none;
+  }
+
+  .products-table td:first-child img,
+  .products-table td:first-child > div > div:first-child {
+    width: 38px;
+    height: 48px;
   }
 
   .field-row {
@@ -2564,6 +2758,68 @@ tbody tr:hover {
 
   .footer-cols {
     grid-template-columns: 1fr;
+  }
+
+  /* ===== ADMIN ===== */
+  .admin-sidebar,
+  .admin-sidebar-backdrop {
+    top: 52px;
+  }
+
+  .admin-sidebar {
+    max-height: calc(100vh - 52px);
+  }
+
+  .admin-nav-item {
+    padding: 0.75rem 1.25rem;
+    font-size: 0.65rem;
+  }
+
+  .orders-table th:nth-child(4),
+  .orders-table td:nth-child(4) {
+    display: none;
+  }
+
+  .btn--sm {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.6rem;
+  }
+  .admin-main {
+    padding: 3.75rem 0.85rem 1.5rem;
+  }
+
+  .stat-grid {
+    gap: 0.6rem;
+  }
+
+  .stat-card {
+    padding: 1rem;
+  }
+
+  .stat-label {
+    font-size: 0.55rem;
+  }
+
+  .stat-value {
+    font-size: 1.4rem;
+  }
+
+  thead th {
+    padding: 0.65rem 0.65rem;
+    font-size: 0.6rem;
+  }
+
+  tbody td {
+    padding: 0.65rem;
+    font-size: 0.75rem;
+  }
+
+  .form-card {
+    padding: 1.25rem !important;
+  }
+
+  .admin-main [style*="padding:2rem"] {
+    padding: 1.25rem !important;
   }
 }
 

@@ -3,13 +3,13 @@
 {% block page_title %}CATEGORIES{% endblock %}
 
 {% block content %}
-<div style="display:grid;grid-template-columns:1fr 360px;gap:2rem;align-items:start;">
+<div style="display:grid;grid-template-columns:1fr 360px;gap:2rem;align-items:start;" class="admin-grid">
 
   <!-- LIST -->
   <div>
     <h2 style="font-size:1.25rem;margin-bottom:1.5rem;">All Categories</h2>
     {% if categories %}
-    <div style="background:var(--panel);border:1px solid var(--border);">
+    <div class="table-wrap" style="background:var(--panel);border:1px solid var(--border);">
       <table>
         <thead>
           <tr><th>NAME</th><th>SLUG</th><th>PRODUCTS</th><th></th></tr>

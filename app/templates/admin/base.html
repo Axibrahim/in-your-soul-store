@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}?v=3"/>
   <style>
     .admin-topbar {
       position: fixed; top:0; left:240px; right:0; z-index:100;
@@ -25,6 +25,13 @@
       .admin-topbar { left:0; }
       .admin-main { padding:4.5rem 1rem 2rem; }
     }
+    @media(max-width:520px){
+      .admin-topbar { padding:0 1rem; height:52px; }
+      .admin-main { padding:4rem 0.85rem 1.5rem; }
+      .admin-topbar-title { font-size:0.62rem; }
+      .admin-topbar-actions { gap:0.6rem; }
+      .admin-topbar-actions > span:first-child { display:none; }
+    }
   </style>
 </head>
 <body>
@@ -32,7 +39,8 @@
 
 <div class="admin-layout">
   <!-- SIDEBAR -->
-  <aside class="admin-sidebar">
+  <div class="admin-sidebar-backdrop" id="admin-sidebar-backdrop"></div>
+  <aside class="admin-sidebar" id="admin-sidebar">
     <div style="padding:0 1.5rem 2rem; border-bottom:1px solid var(--border); margin-bottom:1rem;">
       <a href="{{ url_for('main.index') }}" style="display:block;">
         <svg width="150" height="24" viewBox="0 0 150 24" fill="none">
@@ -70,7 +78,12 @@
   <!-- MAIN -->
   <div>
     <div class="admin-topbar">
-      <div class="admin-topbar-title">{% block page_title %}Dashboard{% endblock %}</div>
+      <div style="display:flex;align-items:center;gap:0.85rem;">
+        <button class="nav-burger" id="admin-burger" aria-label="Menu" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="admin-topbar-title">{% block page_title %}Dashboard{% endblock %}</div>
+      </div>
       <div class="admin-topbar-actions">
         <span style="font-family:var(--font-display);font-size:0.65rem;color:var(--text-dim);">{{ current_user.username.upper() }}</span>
         <span class="badge badge--danger">ADMIN</span>
@@ -96,7 +109,7 @@
   </div>
 </div>
 
-<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script src="{{ url_for('static', filename='js/main.js') }}?v=4"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

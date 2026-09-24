@@ -11,12 +11,78 @@ if (navbar) {
 // ── MOBILE BURGER ──────────────────────────────
 const burger = document.getElementById('burger');
 const mobileMenu = document.getElementById('mobile-menu');
+const mobileBackdrop = document.getElementById('mobile-backdrop');
+
+let scrollLockY = 0;
+
+function setMobileMenu(open) {
+  burger.classList.toggle('active', open);
+  mobileMenu.classList.toggle('open', open);
+  if (mobileBackdrop) mobileBackdrop.classList.toggle('open', open);
+  burger.setAttribute('aria-expanded', open ? 'true' : 'false');
+
+  if (open) {
+    scrollLockY = window.scrollY;
+    document.body.style.top = `-${scrollLockY}px`;
+    document.body.classList.add('nav-open');
+  } else {
+    document.body.classList.remove('nav-open');
+    document.body.style.top = '';
+    window.scrollTo(0, scrollLockY);
+  }
+}
 if (burger && mobileMenu) {
+  burger.setAttribute('aria-expanded', 'false');
+
   burger.addEventListener('click', () => {
-    burger.classList.toggle('active');
-    mobileMenu.classList.toggle('open');
+    setMobileMenu(!mobileMenu.classList.contains('open'));
+  });
+
+  // Close as soon as a link is tapped, so navigation doesn't leave it open mid-transition
+  mobileMenu.querySelectorAll('.nav-mobile-link').forEach(link => {
+    link.addEventListener('click', () => setMobileMenu(false));
+  });
+
+  if (mobileBackdrop) {
+    mobileBackdrop.addEventListener('click', () => setMobileMenu(false));
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') setMobileMenu(false);
+  });
+
+  // Swipe down anywhere on the open panel to dismiss it
+  let touchStartY = null;
+  let touchStartX = null;
+
+  mobileMenu.addEventListener('touchstart', (e) => {
+    if (!mobileMenu.classList.contains('open')) return;
+    touchStartY = e.touches[0].clientY;
+    touchStartX = e.touches[0].clientX;
+  }, { passive: true });
+
+  mobileMenu.addEventListener('touchmove', (e) => {
+    // Block the page underneath from scrolling while we're mid-swipe,
+    // otherwise the browser treats this as a scroll gesture instead of
+    // a close gesture and the panel just sits there "stuck".
+    if (mobileMenu.classList.contains('open') && touchStartY !== null) {
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  mobileMenu.addEventListener('touchend', (e) => {
+    if (touchStartY === null) return;
+    const deltaY = e.changedTouches[0].clientY - touchStartY;
+    const deltaX = Math.abs(e.changedTouches[0].clientX - touchStartX);
+    // Mostly-vertical downward swipe past ~50px closes it
+    if (deltaY > 50 && deltaY > deltaX) {
+      setMobileMenu(false);
+    }
+    touchStartY = null;
+    touchStartX = null;
   });
 }
+
 
 // ── CART COUNT ─────────────────────────────────
 async function updateCartCount() {
@@ -504,3 +570,35 @@ document.querySelectorAll('img[data-hide-on-error]').forEach((img) => {
     img.style.display = 'none';
   });
 });
+
+// ── ADMIN MOBILE NAV DROPDOWN ──────────────────
+(function () {
+  var adminBurger = document.getElementById('admin-burger');
+  var adminSidebar = document.getElementById('admin-sidebar');
+  var adminBackdrop = document.getElementById('admin-sidebar-backdrop');
+  if (!adminBurger || !adminSidebar) return;
+
+  function setAdminMenu(open) {
+    adminBurger.classList.toggle('active', open);
+    adminSidebar.classList.toggle('open', open);
+    if (adminBackdrop) adminBackdrop.classList.toggle('open', open);
+    document.body.classList.toggle('nav-open', open);
+    adminBurger.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
+  adminBurger.addEventListener('click', function () {
+    setAdminMenu(!adminSidebar.classList.contains('open'));
+  });
+
+  adminSidebar.querySelectorAll('.admin-nav-item').forEach(function (link) {
+    link.addEventListener('click', function () { setAdminMenu(false); });
+  });
+
+  if (adminBackdrop) {
+    adminBackdrop.addEventListener('click', function () { setAdminMenu(false); });
+  }
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') setAdminMenu(false);
+  });
+})();
