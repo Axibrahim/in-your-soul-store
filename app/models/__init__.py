@@ -150,9 +150,28 @@ class Order(db.Model):
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
+    delivered_at = db.Column(db.DateTime, nullable=True)  # set the moment status first becomes 'delivered'; drives the 48h refund window
     items = db.relationship('OrderItem', backref='order', lazy=True, cascade='all, delete-orphan')
+    refund_requests = db.relationship('RefundRequest', backref='order', lazy=True, cascade='all, delete-orphan')
 
+    REFUND_WINDOW_HOURS = 48
+
+    def refund_deadline(self):
+        if not self.delivered_at:
+            return None
+        return self.delivered_at + timedelta(hours=self.REFUND_WINDOW_HOURS)
+
+    def refund_window_open(self):
+        deadline = self.refund_deadline()
+        return bool(deadline and datetime.utcnow() <= deadline)
+
+    def active_refund_request(self):
+        """Most recent refund request that isn't rejected, if any - used to block duplicate submissions."""
+        for r in sorted(self.refund_requests, key=lambda r: r.created_at, reverse=True):
+            if r.status != 'rejected':
+                return r
+        return None
+    
     def get_shipping_address(self):
         try:
             return json.loads(self.shipping_address) if self.shipping_address else {}
@@ -187,3 +206,32 @@ class OrderItem(db.Model):
 
     def __repr__(self):
         return f'<OrderItem {self.product_name} x{self.quantity}>'
+
+
+class RefundRequest(db.Model):
+    __tablename__ = 'refund_requests'
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    reason = db.Column(db.Text, nullable=True)
+    status = db.Column(db.String(20), default='pending')  # pending, approved, rejected
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('refund_requests', lazy=True))
+    images = db.relationship('RefundImage', backref='refund_request', lazy=True, cascade='all, delete-orphan')
+
+    def __repr__(self):
+        return f'<RefundRequest order={self.order_id} status={self.status}>'
+
+
+class RefundImage(db.Model):
+    __tablename__ = 'refund_images'
+    id = db.Column(db.Integer, primary_key=True)
+    refund_request_id = db.Column(db.Integer, db.ForeignKey('refund_requests.id'), nullable=False)
+    image_url = db.Column(db.String(300), nullable=False)
+    image_type = db.Column(db.String(20), nullable=False)  # 'item' (order/product proof) or 'receipt' (payment proof)
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<RefundImage {self.image_type} for refund={self.refund_request_id}>'

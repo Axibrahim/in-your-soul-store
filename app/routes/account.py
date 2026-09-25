@@ -1,10 +1,18 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
-from app.models import User, Address, Order, db
+from app.models import User, Address, Order, RefundRequest, RefundImage, db
 from app.password_policy import validate_password
+from app.email import send_refund_request_email
+from datetime import datetime, timedelta
 
 account_bp = Blueprint('account', __name__)
 
+# Abuse guardrails on refund requests, independent of the per-order 48h
+# window. ASSUMPTION: the monthly cap wasn't given a clear number, so this
+# defaults to 2/month — change this one constant if you want a different
+# number.
+REFUND_DAILY_LIMIT = 1
+REFUND_MONTHLY_LIMIT = 2
 
 @account_bp.route('/')
 @login_required

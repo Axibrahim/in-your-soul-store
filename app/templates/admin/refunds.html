@@ -1,0 +1,107 @@
+{% extends 'admin/base.html' %}
+{% block title %}Refunds{% endblock %}
+{% block page_title %}REFUNDS{% endblock %}
+
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
+  <h2 style="font-size:1.25rem;">Refund Requests <span style="color:var(--text-dim);font-size:0.7em;">({{ requests|length }})</span></h2>
+  <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+    {% for s in ['', 'pending', 'approved', 'rejected'] %}
+    <a href="{{ url_for('admin.refunds', status=s if s else None) }}"
+       class="btn btn--sm {% if status_filter == s or (not status_filter and not s) %}btn--primary{% else %}btn--ghost{% endif %}">
+      <span>{{ s.upper() if s else 'ALL' }}</span>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+
+{% if requests %}
+<div style="display:flex;flex-direction:column;gap:1.25rem;">
+  {% for r in requests %}
+  {% set order = r.order %}
+  {% set smap = {'pending':'badge--warning','approved':'badge--success','rejected':'badge--danger'} %}
+  <div style="background:var(--panel);border:1px solid var(--border);padding:1.75rem;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.25rem;">
+      <div>
+        <div style="font-family:var(--font-display);font-size:0.9rem;color:var(--accent);">
+          {{ order.order_number }}
+        </div>
+        <div style="font-size:0.78rem;color:var(--text-dim);margin-top:0.25rem;">
+          Requested {{ r.created_at.strftime('%d %b %Y at %H:%M') }}
+        </div>
+      </div>
+      <span class="badge {{ smap.get(r.status,'badge--muted') }}">{{ r.status.upper() }}</span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.5rem;margin-bottom:1.25rem;">
+      <div>
+        <div style="font-size:0.72rem;color:var(--text-dim);margin-bottom:0.3rem;">CUSTOMER</div>
+        <div style="font-size:0.85rem;">{{ r.user.first_name }} {{ r.user.last_name }}</div>
+        <div style="font-size:0.78rem;color:var(--text-dim);">{{ r.user.phone or 'No phone on file' }}</div>
+      </div>
+      <div>
+        <div style="font-size:0.72rem;color:var(--text-dim);margin-bottom:0.3rem;">ORDER DELIVERED</div>
+        <div style="font-size:0.85rem;">{{ order.delivered_at.strftime('%d %b %Y at %H:%M') if order.delivered_at else '—' }}</div>
+      </div>
+      <div>
+        <div style="font-size:0.72rem;color:var(--text-dim);margin-bottom:0.3rem;">ORDER TOTAL / PAYMENT</div>
+        <div style="font-size:0.85rem;">{{ "%.0f"|format(order.total) }} EGP · {{ order.payment_method.replace('_',' ').title() }}</div>
+      </div>
+    </div>
+
+    {% if r.reason %}
+    <div style="margin-bottom:1.25rem;">
+      <div style="font-size:0.72rem;color:var(--text-dim);margin-bottom:0.3rem;">CUSTOMER NOTE</div>
+      <div style="font-size:0.85rem;color:var(--text);">{{ r.reason }}</div>
+    </div>
+    {% endif %}
+
+    <div style="margin-bottom:1.25rem;">
+      <div style="font-size:0.72rem;color:var(--text-dim);margin-bottom:0.5rem;">ORDER ITEMS</div>
+      <div style="font-size:0.82rem;color:var(--text-dim);">
+        {% for item in order.items %}{{ item.product_name }} ({{ item.size }}) ×{{ item.quantity }}{% if not loop.last %}, {% endif %}{% endfor %}
+      </div>
+    </div>
+
+    <div style="margin-bottom:1.25rem;">
+      <div style="font-size:0.72rem;color:var(--text-dim);margin-bottom:0.6rem;">UPLOADED EVIDENCE</div>
+      <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+        {% for img in r.images %}
+        <a href="{{ img.image_url }}" target="_blank" rel="noopener" style="display:block;">
+          <img src="{{ img.image_url }}" alt="{{ img.image_type }}" style="width:120px;height:120px;object-fit:cover;border:1px solid var(--border);display:block;"/>
+          <div style="font-size:0.65rem;color:var(--text-dim);margin-top:0.3rem;text-align:center;">
+            {{ 'ITEM PHOTO' if img.image_type == 'item' else 'PAYMENT PROOF' }}<br/>
+            {{ img.uploaded_at.strftime('%d %b, %H:%M') }}
+          </div>
+        </a>
+        {% else %}
+        <div style="font-size:0.8rem;color:var(--text-dim);">No images uploaded.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:1.25rem;">
+      <div style="display:flex;gap:1rem;">
+        <a href="{{ url_for('admin.order_detail', order_id=order.id) }}" style="font-size:0.78rem;color:var(--text-dim);">View full order →</a>
+      </div>
+      <form method="POST" action="{{ url_for('admin.update_refund_status', request_id=r.id) }}" style="display:flex;gap:0.5rem;align-items:center;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <input type="hidden" name="return_filter" value="{{ status_filter or '' }}"/>
+        <select name="status" style="width:auto;">
+          {% for s in ['pending','approved','rejected'] %}
+          <option value="{{ s }}" {% if r.status == s %}selected{% endif %}>{{ s.upper() }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="btn btn--sm btn--primary"><span>UPDATE</span></button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state" style="padding:6rem 0;border:1px solid var(--border);background:var(--panel);">
+  <div class="empty-icon">↺</div>
+  <h3>NO REFUND REQUESTS</h3>
+</div>
+{% endif %}
+{% endblock %}

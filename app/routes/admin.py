@@ -41,7 +41,13 @@ def slugify(text):
     return text.strip('-')
 
 
-def save_product_image(file):
+def save_product_image(file, folder=None):
+    """Validates and uploads an image to Supabase storage, returning its public URL.
+
+    `folder` is an optional path prefix within BUCKET_NAME (e.g. "refunds") so
+    refund evidence photos land in their own folder of the same bucket instead
+    of needing a second bucket provisioned in Supabase.
+    """
     if not file or not file.filename or not allowed_file(file.filename):
         return None
 
@@ -61,6 +67,7 @@ def save_product_image(file):
     base = secure_filename(os.path.splitext(file.filename)[0]) or 'image'
     ext = image_format.lower().replace('jpeg', 'jpg')
     filename = f"{base}_{int(time.time())}_{secrets.token_hex(4)}.{ext}"
+    storage_path = f"{folder.strip('/')}/{filename}" if folder else filename
 
     content_type_map = {'jpg': 'image/jpeg', 'png': 'image/png', 'webp': 'image/webp', 'gif': 'image/gif'}
     content_type = content_type_map.get(ext, file.content_type or 'application/octet-stream')
@@ -74,13 +81,13 @@ def save_product_image(file):
         file_bytes = file.stream.read()
 
         supabase.storage.from_(BUCKET_NAME).upload(
-            path=filename,
+            path=storage_path,
             file=file_bytes,
             file_options={"content-type": content_type, "upsert": "true"}
         )
-        return supabase.storage.from_(BUCKET_NAME).get_public_url(filename)
+        return supabase.storage.from_(BUCKET_NAME).get_public_url(storage_path)
     except Exception as e:
-        current_app.logger.exception("Supabase upload failed for %s: %s", filename, e)
+        current_app.logger.exception("Supabase upload failed for %s: %s", storage_path, e)
         return None
 
 
@@ -363,6 +370,12 @@ def update_order_status(order_id):
     if new_status in valid:
         old_status = order.status
         order.status = new_status
+        if new_status == 'delivered' and old_status != 'delivered':
+            # Marks the start of the 48h refund window. Guarded so re-submitting
+            # the same "delivered" status twice in a row doesn't reset the
+            # clock - but a genuine re-delivery (delivered -> cancelled ->
+            # delivered again) does restart it, which is correct.
+            order.delivered_at = datetime.utcnow()
         db.session.commit()
         flash(f'Order status updated to {new_status}.', 'success')
 
@@ -372,6 +385,42 @@ def update_order_status(order_id):
             if customer and customer.email:
                 send_order_status_email(customer.email, order.order_number, new_status, first_name=customer.first_name)
     return redirect(url_for('admin.order_detail', order_id=order_id))
+
+
+@admin_bp.route('/refunds')
+@login_required
+@admin_required
+def refunds():
+    from app.models import RefundRequest
+    status_filter = request.args.get('status', None)
+    query = RefundRequest.query.order_by(RefundRequest.created_at.desc())
+    if status_filter:
+        query = query.filter_by(status=status_filter)
+    requests_list = query.all()
+    return render_template('admin/refunds.html', requests=requests_list, status_filter=status_filter)
+
+
+@admin_bp.route('/refunds/<int:request_id>/status', methods=['POST'])
+@login_required
+@admin_required
+def update_refund_status(request_id):
+    from app.models import RefundRequest
+    from app.email import send_refund_status_email
+    refund = RefundRequest.query.get_or_404(request_id)
+    new_status = request.form.get('status')
+    if new_status in ('pending', 'approved', 'rejected'):
+        old_status = refund.status
+        refund.status = new_status
+        db.session.commit()
+        flash(f'Refund request marked {new_status}.', 'success')
+
+        # Only email on a genuine decision, not a no-op re-save
+        if new_status != old_status and new_status in ('approved', 'rejected'):
+            customer = refund.user
+            if customer and customer.email:
+                send_refund_status_email(customer.email, refund.order, refund, first_name=customer.first_name)
+    return redirect(url_for('admin.refunds', status=request.form.get('return_filter') or None))
+
 
 @admin_bp.route('/categories')
 @login_required
