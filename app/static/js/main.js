@@ -15,12 +15,23 @@ if (navbar) {
   var mobileBackdrop = document.getElementById('mobile-backdrop');
   if (!burger || !mobileMenu) return;
 
+  var scrollLockY = 0;
+
   function setMobileMenu(open) {
     burger.classList.toggle('active', open);
     mobileMenu.classList.toggle('open', open);
     if (mobileBackdrop) mobileBackdrop.classList.toggle('open', open);
-    document.body.classList.toggle('nav-open', open);
     burger.setAttribute('aria-expanded', open ? 'true' : 'false');
+
+    if (open) {
+      scrollLockY = window.scrollY;
+      document.body.style.top = `-${scrollLockY}px`;
+      document.body.classList.add('nav-open');
+    } else {
+      document.body.classList.remove('nav-open');
+      document.body.style.top = '';
+      window.scrollTo(0, scrollLockY);
+    }
   }
 
   burger.addEventListener('click', function () {
