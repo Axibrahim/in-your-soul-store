@@ -1711,6 +1711,13 @@ body.nav-open {
   overflow-x: auto;
 }
 
+
+.admin-sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+}
+
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -2570,6 +2577,7 @@ tbody tr:hover {
 
   /* Dim + blur the page behind the open dropdown, tap to close */
   .admin-sidebar-backdrop {
+    display: block;
     position: fixed;
     inset: 0;
     top: 56px;
