@@ -110,10 +110,48 @@
 {% endif %}
 
 <div style="border-top:1px solid var(--border);margin-top:1.25rem;padding-top:1.25rem;">
-  <div style="font-family:var(--font-display);font-size:0.65rem;letter-spacing:0.15em;color:var(--accent);margin-bottom:0.5rem;">14-DAY REFUND POLICY</div>
-  <div style="font-size:0.82rem;color:var(--text-dim);line-height:1.7;">
-    You may request a refund within 14 days of delivery. Item must be unworn and in original condition. Contact us to initiate a return.
-  </div>
+  {% set active_refund = order.active_refund_request() %}
+  {% if active_refund %}
+    <div style="font-family:var(--font-display);font-size:0.65rem;letter-spacing:0.15em;color:var(--accent);margin-bottom:0.5rem;">REFUND REQUEST</div>
+    {% set smap = {'pending':'badge--warning','approved':'badge--success','rejected':'badge--danger'} %}
+    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem;">
+      <span class="badge {{ smap.get(active_refund.status,'badge--muted') }}">{{ active_refund.status.upper() }}</span>
+      <span style="font-size:0.78rem;color:var(--text-dim);">Requested {{ active_refund.created_at.strftime('%d %b %Y') }}</span>
+    </div>
+    <div style="font-size:0.82rem;color:var(--text-dim);line-height:1.7;">
+      {% if active_refund.status == 'pending' %}
+        We're reviewing your request and will email you once there's a decision.
+      {% elif active_refund.status == 'approved' %}
+        Your refund was approved and will be processed shortly.
+      {% endif %}
+    </div>
+  {% elif order.status == 'delivered' and order.refund_window_open() %}
+    <div style="font-family:var(--font-display);font-size:0.65rem;letter-spacing:0.15em;color:var(--accent);margin-bottom:0.5rem;">48-HOUR REFUND POLICY</div>
+    <div style="font-size:0.82rem;color:var(--text-dim);line-height:1.7;margin-bottom:1rem;">
+      You may request a refund within 48 hours of delivery (by {{ order.refund_deadline().strftime('%d %b %Y at %H:%M') }}). Item must be unworn and in original condition.
+    </div>
+    <form method="POST" action="{{ url_for('account.request_refund', order_id=order.id) }}" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <div class="field">
+        <label>REASON FOR REFUND</label>
+        <textarea name="reason" rows="3" placeholder="Tell us what's wrong with the item" required></textarea>
+      </div>
+      <div class="field">
+        <label>PHOTO OF ITEM</label>
+        <input type="file" name="item_photo" accept="image/png,image/jpeg,image/webp,image/gif" required/>
+      </div>
+      <div class="field">
+        <label>PAYMENT PROOF (OPTIONAL)</label>
+        <input type="file" name="receipt_photo" accept="image/png,image/jpeg,image/webp,image/gif"/>
+      </div>
+      <button type="submit" class="btn btn--ghost btn--full"><span>REQUEST REFUND</span></button>
+    </form>
+  {% elif order.status == 'delivered' %}
+    <div style="font-family:var(--font-display);font-size:0.65rem;letter-spacing:0.15em;color:var(--text-dim);margin-bottom:0.5rem;">REFUND WINDOW CLOSED</div>
+    <div style="font-size:0.82rem;color:var(--text-dim);line-height:1.7;">
+      The 48-hour refund window for this order has closed.
+    </div>
+  {% endif %}
 </div>
 
       <a href="{{ url_for('main.shop') }}" class="btn btn--ghost btn--full" style="margin-top:1rem;"><span>CONTINUE SHOPPING</span></a>

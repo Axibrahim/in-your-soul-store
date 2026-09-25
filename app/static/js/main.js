@@ -481,16 +481,39 @@ const newAddressRadio = document.getElementById('use-new-address');
 const savedSection = document.getElementById('saved-address-section');
 const newSection = document.getElementById('new-address-section');
 
+// The new-address fields carry `required` in the HTML so the form still
+// validates correctly for stores with no saved addresses (where this toggle
+// doesn't render at all and the fields are always visible). But when the
+// toggle IS present and "USE SAVED ADDRESS" is selected, #new-address-section
+// is hidden via display:none while its inputs are still required - the
+// browser then refuses to submit (native validation tries to focus a hidden
+// field and can't), silently blocking checkout for anyone with a saved
+// address. Keep `required` in sync with which section is actually visible.
+function setNewAddressRequired(isRequired) {
+  if (!newSection) return;
+  newSection.querySelectorAll('input[name]').forEach(input => {
+    if (['street', 'building', 'floor', 'district', 'governorate'].includes(input.name)) {
+      input.required = isRequired;
+    }
+  });
+}
+
 if (savedAddressRadio && newAddressRadio) {
   savedAddressRadio.addEventListener('change', () => {
     if (savedSection) savedSection.style.display = '';
     if (newSection) newSection.style.display = 'none';
+    setNewAddressRequired(false);
   });
   newAddressRadio.addEventListener('change', () => {
     if (savedSection) savedSection.style.display = 'none';
     if (newSection) newSection.style.display = '';
+    setNewAddressRequired(true);
   });
+  // Sync on load to match whichever radio is checked by default
+  // (USE SAVED ADDRESS, which is why this was broken on first load).
+  setNewAddressRequired(newAddressRadio.checked);
 }
+
 
 // ── QUANTITY CONTROLS (cart) ───────────────────
 document.querySelectorAll('.qty-form').forEach(form => {

@@ -198,3 +198,107 @@ def send_order_status_email(
     except Exception:
         current_app.logger.exception("Failed to send order status email for order %s", order_id)
         return False
+
+def send_refund_request_email(to_email: str, order, refund, first_name: str = "") -> bool:
+    """Confirms to the customer that their refund request was received and is pending review."""
+    base_url = os.environ.get('BASE_URL', 'https://inyoursoul.store').rstrip('/')
+
+    try:
+        path = url_for('account.order_detail', order_id=order.id)
+    except Exception:
+        path = f"/account/order/{order.id}"
+
+    link = f"{base_url}{path}"
+
+    current_app.logger.info(
+        "Sending refund request confirmation for order %s to %s", order.order_number, to_email
+    )
+
+    body = (
+        f"Hi {first_name or 'there'},\n\n"
+        f"We've received your refund request for order #{order.order_number}.\n\n"
+        f"Our team will review it and get back to you within 2-3 business days.\n\n"
+        f"You can check the status of your request here:\n{link}\n\n"
+        f"Thanks for your patience."
+    )
+
+    resend.api_key = os.environ.get('RESEND_API_KEY')
+    from_email = os.environ.get('RESEND_ORDERS_FROM_EMAIL') or os.environ.get('RESEND_FROM_EMAIL')
+
+    if not resend.api_key or not from_email:
+        current_app.logger.error(
+            "Resend not configured: RESEND_API_KEY / RESEND_ORDERS_FROM_EMAIL missing"
+        )
+        return False
+
+    try:
+        resend.Emails.send({
+            "from": from_email,
+            "to": [to_email],
+            "subject": f"Refund request received — order #{order.order_number}",
+            "text": body,
+        })
+        return True
+
+    except Exception:
+        current_app.logger.exception(
+            "Failed to send refund request confirmation for order %s", order.order_number
+        )
+        return False
+
+
+def send_refund_status_email(to_email: str, order, refund, first_name: str = "") -> bool:
+    """Notifies the customer that their refund request was approved or rejected."""
+    base_url = os.environ.get('BASE_URL', 'https://inyoursoul.store').rstrip('/')
+
+    try:
+        path = url_for('account.order_detail', order_id=order.id)
+    except Exception:
+        path = f"/account/order/{order.id}"
+
+    link = f"{base_url}{path}"
+    approved = refund.status == 'approved'
+
+    current_app.logger.info(
+        "Sending refund status email (%s) for order %s to %s", refund.status, order.order_number, to_email
+    )
+
+    if approved:
+        body = (
+            f"Hi {first_name or 'there'},\n\n"
+            f"Good news — your refund request for order #{order.order_number} has been approved.\n\n"
+            f"We'll process your refund shortly. If you paid online, it can take a few business "
+            f"days to appear on your statement.\n\n"
+            f"View your order: {link}"
+        )
+    else:
+        body = (
+            f"Hi {first_name or 'there'},\n\n"
+            f"Your refund request for order #{order.order_number} was not approved.\n\n"
+            f"If you think this is a mistake or want more details, reply to this email and we'll help.\n\n"
+            f"View your order: {link}"
+        )
+
+    resend.api_key = os.environ.get('RESEND_API_KEY')
+    from_email = os.environ.get('RESEND_ORDERS_FROM_EMAIL') or os.environ.get('RESEND_FROM_EMAIL')
+
+    if not resend.api_key or not from_email:
+        current_app.logger.error(
+            "Resend not configured: RESEND_API_KEY / RESEND_ORDERS_FROM_EMAIL missing"
+        )
+        return False
+
+    try:
+        resend.Emails.send({
+            "from": from_email,
+            "to": [to_email],
+            "subject": f"Refund {'approved' if approved else 'update'} — order #{order.order_number}",
+            "text": body,
+        })
+        return True
+
+    except Exception:
+        current_app.logger.exception(
+            "Failed to send refund status email for order %s", order.order_number
+        )
+        return False

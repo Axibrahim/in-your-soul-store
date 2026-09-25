@@ -156,3 +156,80 @@ def set_default_address(addr_id):
 def track_order(order_number):
     order = Order.query.filter_by(order_number=order_number, user_id=current_user.id).first_or_404()
     return redirect(url_for('account.order_detail', order_id=order.id))
+
+
+@account_bp.route('/order/<int:order_id>/refund', methods=['POST'])
+@login_required
+def request_refund(order_id):
+    # Imported lazily to avoid a circular import (admin.py doesn't import account.py).
+    from app.routes.admin import save_product_image
+
+    order = Order.query.filter_by(id=order_id, user_id=current_user.id).first_or_404()
+
+    if order.status != 'delivered':
+        flash('Refunds can only be requested for delivered orders.', 'danger')
+        return redirect(url_for('account.order_detail', order_id=order_id))
+
+    if not order.refund_window_open():
+        flash('The 48-hour refund window for this order has closed.', 'danger')
+        return redirect(url_for('account.order_detail', order_id=order_id))
+
+    if order.active_refund_request():
+        flash('You already have an active refund request for this order.', 'danger')
+        return redirect(url_for('account.order_detail', order_id=order_id))
+
+    since_daily = datetime.utcnow() - timedelta(days=1)
+    since_monthly = datetime.utcnow() - timedelta(days=30)
+    daily_count = RefundRequest.query.filter(
+        RefundRequest.user_id == current_user.id,
+        RefundRequest.created_at >= since_daily
+    ).count()
+    monthly_count = RefundRequest.query.filter(
+        RefundRequest.user_id == current_user.id,
+        RefundRequest.created_at >= since_monthly
+    ).count()
+
+    if daily_count >= REFUND_DAILY_LIMIT:
+        flash('You can only submit one refund request per day. Please try again tomorrow.', 'danger')
+        return redirect(url_for('account.order_detail', order_id=order_id))
+
+    if monthly_count >= REFUND_MONTHLY_LIMIT:
+        flash(f'You have reached the limit of {REFUND_MONTHLY_LIMIT} refund requests this month.', 'danger')
+        return redirect(url_for('account.order_detail', order_id=order_id))
+
+    reason = request.form.get('reason', '').strip()
+    if not reason:
+        flash('Please tell us why you are requesting a refund.', 'danger')
+        return redirect(url_for('account.order_detail', order_id=order_id))
+
+    item_photo = request.files.get('item_photo')
+    receipt_photo = request.files.get('receipt_photo')
+
+    if not item_photo or not item_photo.filename:
+        flash('Please attach a photo of the item.', 'danger')
+        return redirect(url_for('account.order_detail', order_id=order_id))
+
+    refund = RefundRequest(order_id=order.id, user_id=current_user.id, reason=reason)
+    db.session.add(refund)
+    db.session.flush()  # assigns refund.id so images can reference it
+
+    for file, image_type in [(item_photo, 'item'), (receipt_photo, 'receipt')]:
+        if file and file.filename:
+            public_url = save_product_image(file, folder='refunds')
+            if public_url:
+                db.session.add(RefundImage(
+                    refund_request_id=refund.id,
+                    image_url=public_url,
+                    image_type=image_type
+                ))
+            else:
+                label = 'Item' if image_type == 'item' else 'Receipt'
+                flash(f'{label} photo was not a valid image or upload failed and was skipped.', 'danger')
+
+    db.session.commit()
+    flash('Your refund request has been submitted. We will review it shortly.', 'success')
+
+    if current_user.email:
+        send_refund_request_email(current_user.email, order, refund, first_name=current_user.first_name)
+
+    return redirect(url_for('account.order_detail', order_id=order_id))
