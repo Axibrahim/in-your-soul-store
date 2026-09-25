@@ -3,6 +3,106 @@
 {% block page_title %}ORDERS{% endblock %}
 
 {% block content %}
+
+<style>
+  .orders-mobile { display: none; }
+
+  @media (max-width: 768px) {
+    .orders-table { display: none; }
+
+    .orders-mobile {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .order-mobile-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      padding: 0.9rem;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .order-mobile-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.8rem;
+      padding-bottom: 0.8rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .order-mobile-number {
+      font-family: var(--font-display);
+      font-size: 0.8rem;
+      color: var(--accent);
+    }
+
+    .order-mobile-customer {
+      font-size: 0.78rem;
+      color: var(--text);
+      margin-top: 0.3rem;
+    }
+
+    .order-mobile-email {
+      font-size: 0.68rem;
+      color: var(--text-dim);
+      word-break: break-word;
+      margin-top: 0.15rem;
+    }
+
+    .order-mobile-info {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.65rem;
+      padding: 0.85rem 0;
+    }
+
+    .order-mobile-info-item { min-width: 0; }
+
+    .order-mobile-label {
+      display: block;
+      font-family: var(--font-display);
+      font-size: 0.5rem;
+      letter-spacing: 0.12em;
+      color: var(--text-dim);
+      margin-bottom: 0.3rem;
+    }
+
+    .order-mobile-value {
+      font-family: var(--font-display);
+      font-size: 0.7rem;
+      color: var(--text);
+      word-break: break-word;
+    }
+
+    .order-mobile-actions {
+      display: flex;
+      gap: 0.5rem;
+      border-top: 1px solid var(--border);
+      padding-top: 0.75rem;
+    }
+
+    .order-mobile-actions .btn {
+      flex: 1;
+      min-width: 0;
+      justify-content: center;
+    }
+  }
+
+  @media (max-width: 420px) {
+    .order-mobile-card { padding: 0.75rem; }
+    .order-mobile-header { gap: 0.65rem; }
+    .order-mobile-info { gap: 0.55rem; }
+    .order-mobile-actions .btn {
+      font-size: 0.55rem;
+      padding-left: 0.5rem;
+      padding-right: 0.5rem;
+    }
+  }
+</style>
+
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
   <h2 style="font-size:1.25rem;">All Orders <span style="color:var(--text-dim);font-size:0.7em;">({{ orders|length }})</span></h2>
   <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
@@ -16,6 +116,9 @@
 </div>
 
 {% if orders %}
+
+{% set smap = {'pending':'badge--warning','confirmed':'badge--success','shipped':'badge--success','delivered':'badge--success','cancelled':'badge--danger'} %}
+
 <div class="table-wrap orders-table" style="background:var(--panel);border:1px solid var(--border);">
   <table>
     <thead>
@@ -43,7 +146,6 @@
         <td style="font-family:var(--font-display);font-size:0.85rem;">{{ order.items|length }}</td>
         <td style="font-family:var(--font-display);font-size:0.9rem;">{{ "%.0f"|format(order.total) }} EGP</td>
         <td>
-          {% set smap = {'pending':'badge--warning','confirmed':'badge--success','shipped':'badge--success','delivered':'badge--success','cancelled':'badge--danger'} %}
           <span class="badge {{ smap.get(order.status,'badge--muted') }}">{{ order.status.upper() }}</span>
         </td>
         <td><a href="{{ url_for('admin.order_detail', order_id=order.id) }}" class="btn btn--sm btn--ghost"><span>MANAGE</span></a></td>
@@ -52,6 +154,47 @@
     </tbody>
   </table>
 </div>
+
+<div class="orders-mobile">
+  {% for order in orders %}
+  <div class="order-mobile-card">
+    <div class="order-mobile-header">
+      <div>
+        <div class="order-mobile-number">{{ order.order_number }}</div>
+        <div class="order-mobile-customer">{{ order.user.first_name }} {{ order.user.last_name }}</div>
+        <div class="order-mobile-email">{{ order.user.email }}</div>
+      </div>
+      <span class="badge {{ smap.get(order.status,'badge--muted') }}">{{ order.status.upper() }}</span>
+    </div>
+
+    <div class="order-mobile-info">
+      <div class="order-mobile-info-item">
+        <span class="order-mobile-label">DATE</span>
+        <span class="order-mobile-value">{{ order.created_at.strftime('%d %b %Y, %H:%M') }}</span>
+      </div>
+      <div class="order-mobile-info-item">
+        <span class="order-mobile-label">PAYMENT</span>
+        <span class="order-mobile-value">{{ order.payment_method.replace('_',' ').title() }}</span>
+      </div>
+      <div class="order-mobile-info-item">
+        <span class="order-mobile-label">ITEMS</span>
+        <span class="order-mobile-value">{{ order.items|length }}</span>
+      </div>
+      <div class="order-mobile-info-item">
+        <span class="order-mobile-label">TOTAL</span>
+        <span class="order-mobile-value">{{ "%.0f"|format(order.total) }} EGP</span>
+      </div>
+    </div>
+
+    <div class="order-mobile-actions">
+      <a href="{{ url_for('admin.order_detail', order_id=order.id) }}" class="btn btn--sm btn--ghost">
+        <span>MANAGE</span>
+      </a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
 {% else %}
 <div class="empty-state" style="padding:6rem 0;border:1px solid var(--border);background:var(--panel);">
   <div class="empty-icon">📋</div>

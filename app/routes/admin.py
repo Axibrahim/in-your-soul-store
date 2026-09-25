@@ -55,12 +55,10 @@ def save_product_image(file, folder=None):
 
     try:
         image = Image.open(file.stream)
-        image.verify()
-        file.stream.seek(0)
-        image = Image.open(file.stream)
+        image.load()
         image_format = image.format
-    except Exception:
-        current_app.logger.warning("Image validation failed for %s", file.filename)
+    except Exception as e:
+        current_app.logger.warning("Image validation failed for %s: %s", file.filename, e)
         return None
 
     if image_format not in ALLOWED_PIL_FORMATS:

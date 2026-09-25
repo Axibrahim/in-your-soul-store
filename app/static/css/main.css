@@ -1775,10 +1775,6 @@ body.nav-open {
   max-width: 100%;
 }
 
-/* Mobile order cards: hidden on desktop, table takes over below 640px */
-.orders-cards {
-  display: none;
-}
 
 table {
   width: 100%;
@@ -2630,21 +2626,9 @@ tbody tr:hover {
 
   .admin-main {
     padding: 4rem 1.25rem 2rem;
-    overflow-x: hidden;
   }
 
-    /* Products table: drop the least essential columns on phones instead
-     of forcing a 7-column horizontal scroll for every row. */
-  .products-table th:nth-child(2),
-  .products-table td:nth-child(2) {
-    display: none;
-  }
 
-  .products-table td:first-child img,
-  .products-table td:first-child > div > div:first-child {
-    width: 38px;
-    height: 48px;
-  }
 
   .field-row {
     grid-template-columns: 1fr;
@@ -2788,11 +2772,6 @@ tbody tr:hover {
   .admin-nav-item {
     padding: 0.75rem 1.25rem;
     font-size: 0.65rem;
-  }
-
-  .orders-table th:nth-child(4),
-  .orders-table td:nth-child(4) {
-    display: none;
   }
 
   .btn--sm {

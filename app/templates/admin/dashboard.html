@@ -3,6 +3,67 @@
 {% block page_title %}DASHBOARD{% endblock %}
 
 {% block content %}
+
+<style>
+  .recent-orders-mobile { display: none; }
+
+  @media (max-width: 768px) {
+    .recent-orders-table { display: none; }
+
+    .recent-orders-mobile {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .recent-order-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem;
+      border: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    .recent-order-main { min-width: 0; }
+
+    .recent-order-number {
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      color: var(--accent);
+    }
+
+    .recent-order-customer {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      margin-top: 0.2rem;
+    }
+
+    .recent-order-side {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.4rem;
+      flex: 0 0 auto;
+    }
+
+    .recent-order-total {
+      font-family: var(--font-display);
+      font-size: 0.78rem;
+      color: var(--text);
+    }
+
+    .dashboard-quick-actions {
+      flex-direction: column;
+    }
+
+    .dashboard-quick-actions .btn {
+      width: 100%;
+    }
+  }
+</style>
+
 <div style="margin-bottom:2rem;">
 <h2 style="font-size:1.5rem;margin-bottom:0.35rem;">
   Welcome back, {{ current_user.first_name }}!
@@ -35,13 +96,13 @@
 </div>
 
 <!-- QUICK ACTIONS -->
-<div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:2.5rem;">
+<div class="dashboard-quick-actions" style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:2.5rem;">
   <a href="{{ url_for('admin.add_product') }}" class="btn btn--primary"><span>+ ADD PRODUCT</span></a>
   <a href="{{ url_for('admin.orders') }}" class="btn"><span>VIEW ALL ORDERS</span></a>
   <a href="{{ url_for('admin.orders', status='pending') }}" class="btn btn--danger"><span>⚡ PENDING ORDERS ({{ pending_orders }})</span></a>
 </div>
 
-<!-- RECENT ORDERS TABLE -->
+<!-- RECENT ORDERS -->
 <div style="background:var(--panel);border:1px solid var(--border);padding:1.75rem;">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
     <div style="font-family:var(--font-display);font-size:0.65rem;letter-spacing:0.2em;color:var(--text-dim);">RECENT ORDERS</div>
@@ -49,7 +110,10 @@
   </div>
 
   {% if recent_orders %}
-  <div class="table-wrap">
+
+  {% set smap = {'pending':'badge--warning','confirmed':'badge--success','shipped':'badge--success','delivered':'badge--success','cancelled':'badge--danger'} %}
+
+  <div class="table-wrap recent-orders-table">
     <table>
       <thead>
         <tr>
@@ -71,7 +135,6 @@
           <td style="font-size:0.8rem;color:var(--text-dim);">{{ order.payment_method.replace('_',' ').title() }}</td>
           <td style="font-family:var(--font-display);">{{ "%.0f"|format(order.total) }} EGP</td>
           <td>
-            {% set smap = {'pending':'badge--warning','confirmed':'badge--success','shipped':'badge--success','delivered':'badge--success','cancelled':'badge--danger'} %}
             <span class="badge {{ smap.get(order.status,'badge--muted') }}">{{ order.status.upper() }}</span>
           </td>
           <td><a href="{{ url_for('admin.order_detail', order_id=order.id) }}" class="btn btn--sm btn--ghost"><span>VIEW</span></a></td>
@@ -80,6 +143,22 @@
       </tbody>
     </table>
   </div>
+
+  <div class="recent-orders-mobile">
+    {% for order in recent_orders %}
+    <a href="{{ url_for('admin.order_detail', order_id=order.id) }}" class="recent-order-row">
+      <div class="recent-order-main">
+        <div class="recent-order-number">{{ order.order_number }}</div>
+        <div class="recent-order-customer">{{ order.user.first_name }} {{ order.user.last_name }} · {{ order.created_at.strftime('%d %b') }}</div>
+      </div>
+      <div class="recent-order-side">
+        <span class="badge {{ smap.get(order.status,'badge--muted') }}">{{ order.status.upper() }}</span>
+        <div class="recent-order-total">{{ "%.0f"|format(order.total) }} EGP</div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+
   {% else %}
   <div class="empty-state" style="padding:3rem 0;">
     <div class="empty-icon" style="font-size:2rem;">📋</div>
