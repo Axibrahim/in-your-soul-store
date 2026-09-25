@@ -71,48 +71,22 @@ def _get_top_selling_products(limit=8):
     return [by_id[pid] for pid in ids_in_rank_order if pid in by_id]
 
 
-LATEST_HITS_MIN = 4   # never show fewer than this (best-effort - can't exceed the catalog size)
-LATEST_HITS_MAX = 8   # hard cap either way
-
-
 @cache.memoize(timeout=30)
 def _get_latest_products():
-    """The 'Latest Hits' swipe carousel (latest_products), 4-8 cards.
+    """The 'Latest Hits' swipe carousel (latest_products).
 
-    1) Start with products ticked "Show in Latest Hits" in the admin panel
-       (that checkbox is the existing is_featured column, just relabelled -
-       no DB change).
-    2) If that gives 4 or fewer, top up with our best-selling products (by
-       units sold across all orders) until we reach 8 or run out - so a
-       couple of hand-picked pieces still get surrounded by a fuller row
-       instead of a half-empty carousel.
-    3) If we're still under 4 (e.g. a brand-new store with no orders yet),
-       top up with the newest active products as a last resort.
-    Duplicates are skipped; a product ticked *and* a best-seller only appears
-    once. Everything is capped at 8.
+    Shows exactly the products ticked "Show in Latest Hits" in the admin
+    panel (that checkbox is the existing is_featured column, just
+    relabelled - no DB change). No auto-padding with best-sellers or
+    newest arrivals, and no min/max count - admins are fully in control
+    of how many (or how few) cards appear here.
     """
-    base = Product.query.options(selectinload(Product.variants)).filter_by(is_active=True)
-
-    combined = base.filter_by(is_featured=True).order_by(Product.created_at.desc()).limit(LATEST_HITS_MAX).all()
-    seen_ids = {p.id for p in combined}
-
-    if len(combined) <= LATEST_HITS_MIN:
-        for p in _get_top_selling_products(limit=LATEST_HITS_MAX):
-            if len(combined) >= LATEST_HITS_MAX:
-                break
-            if p.id not in seen_ids:
-                combined.append(p)
-                seen_ids.add(p.id)
-
-    if len(combined) < LATEST_HITS_MIN:
-        for p in base.order_by(Product.created_at.desc()).limit(LATEST_HITS_MAX).all():
-            if len(combined) >= LATEST_HITS_MAX:
-                break
-            if p.id not in seen_ids:
-                combined.append(p)
-                seen_ids.add(p.id)
-
-    return combined[:LATEST_HITS_MAX]
+    return (
+        Product.query.options(selectinload(Product.variants))
+        .filter_by(is_active=True, is_featured=True)
+        .order_by(Product.created_at.desc())
+        .all()
+    )
 
 
 _latest_bg_cache = {}
