@@ -126,26 +126,38 @@
       {% endif %}
     </div>
   {% elif order.status == 'delivered' and order.refund_window_open() %}
-    <div style="font-family:var(--font-display);font-size:0.65rem;letter-spacing:0.15em;color:var(--accent);margin-bottom:0.5rem;">48-HOUR REFUND POLICY</div>
-    <div style="font-size:0.82rem;color:var(--text-dim);line-height:1.7;margin-bottom:1rem;">
-      You may request a refund within 48 hours of delivery (by {{ order.refund_deadline().strftime('%d %b %Y at %H:%M') }}). Item must be unworn and in original condition.
-    </div>
-    <form method="POST" action="{{ url_for('account.request_refund', order_id=order.id) }}" enctype="multipart/form-data">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-      <div class="field">
-        <label>REASON FOR REFUND</label>
-        <textarea name="reason" rows="3" placeholder="Tell us what's wrong with the item" required></textarea>
+    <details class="refund-disclosure">
+      <summary style="font-family:var(--font-display);font-size:0.65rem;letter-spacing:0.15em;color:var(--accent);cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;">
+        <span>REQUEST A REFUND</span>
+        <span class="refund-disclosure-chevron" style="font-size:0.9rem;">＋</span>
+      </summary>
+      <div style="margin-top:1rem;">
+        <div style="font-size:0.82rem;color:var(--text-dim);line-height:1.7;margin-bottom:1rem;">
+          You may request a refund within 48 hours of delivery (by {{ order.refund_deadline().strftime('%d %b %Y at %H:%M') }}). Item must be unworn and in original condition.
+        </div>
+        <form method="POST" action="{{ url_for('account.request_refund', order_id=order.id) }}" enctype="multipart/form-data">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+          <div class="field">
+            <label>REASON FOR REFUND</label>
+            <textarea name="reason" rows="3" placeholder="Tell us what's wrong with the item" required></textarea>
+          </div>
+          <div class="field">
+            <label>PHOTO OF ITEM</label>
+            <input type="file" name="item_photo" accept="image/png,image/jpeg,image/webp,image/gif" required/>
+          </div>
+          <div class="field">
+            <label>PAYMENT PROOF (OPTIONAL)</label>
+            <input type="file" name="receipt_photo" accept="image/png,image/jpeg,image/webp,image/gif"/>
+          </div>
+          <button type="submit" class="btn btn--ghost btn--full"><span>REQUEST REFUND</span></button>
+        </form>
       </div>
-      <div class="field">
-        <label>PHOTO OF ITEM</label>
-        <input type="file" name="item_photo" accept="image/png,image/jpeg,image/webp,image/gif" required/>
-      </div>
-      <div class="field">
-        <label>PAYMENT PROOF (OPTIONAL)</label>
-        <input type="file" name="receipt_photo" accept="image/png,image/jpeg,image/webp,image/gif"/>
-      </div>
-      <button type="submit" class="btn btn--ghost btn--full"><span>REQUEST REFUND</span></button>
-    </form>
+    </details>
+    <style>
+      .refund-disclosure summary::-webkit-details-marker { display: none; }
+      .refund-disclosure[open] .refund-disclosure-chevron { transform: rotate(45deg); }
+      .refund-disclosure-chevron { display: inline-block; transition: transform 0.2s ease; color: var(--accent); }
+    </style>
   {% elif order.status == 'delivered' %}
     <div style="font-family:var(--font-display);font-size:0.65rem;letter-spacing:0.15em;color:var(--text-dim);margin-bottom:0.5rem;">REFUND WINDOW CLOSED</div>
     <div style="font-size:0.82rem;color:var(--text-dim);line-height:1.7;">

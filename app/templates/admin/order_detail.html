@@ -49,14 +49,14 @@
     <!-- CUSTOMER INFO -->
     <div style="background:var(--panel);border:1px solid var(--border);padding:1.75rem;">
       <div style="font-family:var(--font-display);font-size:0.65rem;letter-spacing:0.2em;color:var(--text-dim);margin-bottom:1.25rem;">CUSTOMER</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+      <div class="customer-info-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
         <div>
           <div style="font-size:0.75rem;color:var(--text-dim);margin-bottom:0.35rem;">NAME</div>
-          <div>{{ order.user.first_name }} {{ order.user.last_name }}</div>
+          <div style="word-break:break-word;">{{ order.user.first_name }} {{ order.user.last_name }}</div>
         </div>
         <div>
           <div style="font-size:0.75rem;color:var(--text-dim);margin-bottom:0.35rem;">EMAIL</div>
-          <div>{{ order.user.email }}</div>
+          <div style="word-break:break-word;">{{ order.user.email }}</div>
         </div>
         <div>
           <div style="font-size:0.75rem;color:var(--text-dim);margin-bottom:0.35rem;">PHONE</div>
@@ -134,5 +134,9 @@
   </div>
 </div>
 
-<style>@media(max-width:768px){.admin-main>div:last-child>div:first-child{grid-template-columns:1fr!important}}</style>
+<style>
+@media(max-width:480px){
+  .customer-info-grid{grid-template-columns:1fr!important;gap:1rem!important;}
+}
+</style>
 {% endblock %}

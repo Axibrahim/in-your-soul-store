@@ -1771,6 +1771,13 @@ body.nav-open {
 /* ============================================ TABLE */
 .table-wrap {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+}
+
+/* Mobile order cards: hidden on desktop, table takes over below 640px */
+.orders-cards {
+  display: none;
 }
 
 table {

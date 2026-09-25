@@ -6,13 +6,15 @@ import os, re, time, secrets
 from app.email import send_order_status_email
 from werkzeug.utils import secure_filename
 from PIL import Image
+import pillow_heif
+pillow_heif.register_heif_opener()  # lets Image.open() read iPhone .heic/.heif photos
 from supabase import create_client, Client
 from datetime import datetime, timedelta
 
 admin_bp = Blueprint('admin', __name__)
 
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp', 'gif'}
-ALLOWED_PIL_FORMATS = {'PNG', 'JPEG', 'WEBP', 'GIF'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp', 'gif', 'heic', 'heif'}
+ALLOWED_PIL_FORMATS = {'PNG', 'JPEG', 'WEBP', 'GIF', 'HEIF'}
 
 # Initialize Supabase Client
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
@@ -65,7 +67,22 @@ def save_product_image(file, folder=None):
         return None
 
     base = secure_filename(os.path.splitext(file.filename)[0]) or 'image'
-    ext = image_format.lower().replace('jpeg', 'jpg')
+
+    # HEIC/HEIF only renders natively in Safari - Chrome, Firefox and Edge (what
+    # the admin dashboard actually runs in) can't display it in an <img> tag.
+    # Re-encode to JPEG at upload time so it's viewable everywhere, rather than
+    # storing the raw iPhone file.
+    if image_format == 'HEIF':
+        from io import BytesIO
+        buf = BytesIO()
+        image.convert('RGB').save(buf, format='JPEG', quality=90)
+        file_bytes = buf.getvalue()
+        ext = 'jpg'
+    else:
+        file.stream.seek(0)
+        file_bytes = file.stream.read()
+        ext = image_format.lower().replace('jpeg', 'jpg')
+
     filename = f"{base}_{int(time.time())}_{secrets.token_hex(4)}.{ext}"
     storage_path = f"{folder.strip('/')}/{filename}" if folder else filename
 
@@ -77,9 +94,6 @@ def save_product_image(file, folder=None):
         return None
 
     try:
-        file.stream.seek(0)
-        file_bytes = file.stream.read()
-
         supabase.storage.from_(BUCKET_NAME).upload(
             path=storage_path,
             file=file_bytes,
