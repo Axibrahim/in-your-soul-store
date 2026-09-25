@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from app.models import User, Address, Order, RefundRequest, RefundImage, db
+from app.routes.main import _maybe_cancel_expired_orders
 from app.password_policy import validate_password
 from app.email import send_refund_request_email
 from datetime import datetime, timedelta
@@ -31,6 +32,7 @@ def orders():
 @account_bp.route('/order/<int:order_id>')
 @login_required
 def order_detail(order_id):
+    _maybe_cancel_expired_orders()
     order = Order.query.filter_by(id=order_id, user_id=current_user.id).first_or_404()
     return render_template('account/order_detail.html', order=order)
 
