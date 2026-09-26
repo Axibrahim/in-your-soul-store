@@ -95,11 +95,16 @@ def validate_session_token() -> bool:
     if _hash_token(raw_token) != current_user.session_token:
         return False  # mismatch → possible stolen cookie
 
-    # Optional: expire tokens after 7 days even with "remember me"
+    # Sliding expiry: 7 days of inactivity logs you out, but every valid
+    # request rolls the window forward. An active "remember me" user never
+    # hits a hard wall; someone who walks away for a week does.
     if current_user.session_issued_at:
         age = datetime.utcnow() - current_user.session_issued_at
         if age > timedelta(days=7):
             return False  # token too old
+
+    current_user.session_issued_at = datetime.utcnow()
+    db.session.commit()
 
     return True
 

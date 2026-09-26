@@ -72,6 +72,7 @@
       {% endif %}
       <a href="{{ url_for('auth.logout') }}" class="nav-mobile-link">LOGOUT</a>
     {% else %}
+      <a href="{{ url_for('auth.register') }}" class="nav-mobile-link">JOIN US</a>
       <a href="{{ url_for('auth.login') }}" class="nav-mobile-link">LOGIN</a>
     {% endif %}
   </div>
