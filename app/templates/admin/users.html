@@ -3,9 +3,144 @@
 {% block page_title %}USERS{% endblock %}
 
 {% block content %}
-<h2 style="font-size:1.25rem;margin-bottom:1.5rem;">All Users <span style="color:var(--text-dim);font-size:0.7em;">({{ users|length }})</span></h2>
 
-<div class="table-wrap products-table" style="background:var(--panel);border:1px solid var(--border);">
+<style>
+  /* ============================================
+     USERS PAGE — MOBILE LAYOUT
+     Desktop table remains unchanged.
+     ============================================ */
+
+  .users-mobile {
+    display: none;
+  }
+
+  @media (max-width: 768px) {
+
+    /* Hide desktop table */
+    .users-table {
+      display: none;
+    }
+
+    /* Mobile user cards */
+    .users-mobile {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .user-mobile-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      padding: 0.9rem;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    /* User header */
+    .user-mobile-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.8rem;
+      padding-bottom: 0.8rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .user-mobile-name {
+      font-family: var(--font-display);
+      font-size: 0.8rem;
+      color: var(--text);
+      line-height: 1.3;
+      word-break: break-word;
+    }
+
+    .user-mobile-username {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      margin-top: 0.2rem;
+    }
+
+    /* Information grid */
+    .user-mobile-info {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.65rem;
+      padding: 0.85rem 0;
+    }
+
+    .user-mobile-info-item {
+      min-width: 0;
+    }
+
+    .user-mobile-info-item--full {
+      grid-column: 1 / -1;
+    }
+
+    .user-mobile-label {
+      display: block;
+      font-family: var(--font-display);
+      font-size: 0.5rem;
+      letter-spacing: 0.12em;
+      color: var(--text-dim);
+      margin-bottom: 0.3rem;
+    }
+
+    .user-mobile-value {
+      font-family: var(--font-display);
+      font-size: 0.7rem;
+      color: var(--text);
+      word-break: break-word;
+    }
+
+    /* Actions */
+    .user-mobile-actions {
+      display: flex;
+      gap: 0.5rem;
+      border-top: 1px solid var(--border);
+      padding-top: 0.75rem;
+    }
+
+    .user-mobile-actions .btn {
+      flex: 1;
+      min-width: 0;
+      justify-content: center;
+    }
+  }
+
+  @media (max-width: 420px) {
+
+    .user-mobile-card {
+      padding: 0.75rem;
+    }
+
+    .user-mobile-header {
+      gap: 0.65rem;
+    }
+
+    .user-mobile-info {
+      gap: 0.55rem;
+    }
+
+    .user-mobile-actions .btn {
+      font-size: 0.55rem;
+      padding-left: 0.5rem;
+      padding-right: 0.5rem;
+    }
+  }
+</style>
+
+
+<h2 style="font-size:1.25rem;margin-bottom:1.5rem;">
+  All Users
+  <span style="color:var(--text-dim);font-size:0.7em;">({{ users|length }})</span>
+</h2>
+
+
+<!-- ============================================
+     DESKTOP TABLE
+     ============================================ -->
+
+<div class="table-wrap users-table" style="background:var(--panel);border:1px solid var(--border);">
   <table>
     <thead>
       <tr>
@@ -38,7 +173,7 @@
         </td>
         <td>
           {% if user.id != current_user.id %}
-          <button 
+          <button
             class="btn btn--sm {% if user.is_admin %}btn--danger{% else %}btn--ghost{% endif %} toggle-admin-btn"
             data-id="{{ user.id }}"
           >
@@ -53,4 +188,69 @@
     </tbody>
   </table>
 </div>
+
+
+<!-- ============================================
+     MOBILE USER CARDS
+     ============================================ -->
+
+<div class="users-mobile">
+  {% for user in users %}
+  <div class="user-mobile-card">
+
+    <!-- USER HEADER -->
+    <div class="user-mobile-header">
+      <div style="min-width:0;flex:1;">
+        <div class="user-mobile-name">{{ user.first_name }} {{ user.last_name }}</div>
+        <div class="user-mobile-username">@{{ user.username }}</div>
+      </div>
+
+      {% if user.is_admin %}
+      <span class="badge badge--danger">ADMIN</span>
+      {% else %}
+      <span class="badge badge--muted">MEMBER</span>
+      {% endif %}
+    </div>
+
+    <!-- USER INFORMATION -->
+    <div class="user-mobile-info">
+
+      <!-- EMAIL -->
+      <div class="user-mobile-info-item user-mobile-info-item--full">
+        <span class="user-mobile-label">EMAIL</span>
+        <span class="user-mobile-value">{{ user.email }}</span>
+      </div>
+
+      <!-- JOINED -->
+      <div class="user-mobile-info-item">
+        <span class="user-mobile-label">JOINED</span>
+        <span class="user-mobile-value">{{ user.created_at.strftime('%d %b %Y') }}</span>
+      </div>
+
+      <!-- ORDERS -->
+      <div class="user-mobile-info-item">
+        <span class="user-mobile-label">ORDERS</span>
+        <span class="user-mobile-value">{{ user.orders|length }}</span>
+      </div>
+
+    </div>
+
+    <!-- ACTIONS -->
+    <div class="user-mobile-actions">
+      {% if user.id != current_user.id %}
+      <button
+        class="btn btn--sm {% if user.is_admin %}btn--danger{% else %}btn--ghost{% endif %} toggle-admin-btn"
+        data-id="{{ user.id }}"
+      >
+        <span>{% if user.is_admin %}REMOVE ADMIN{% else %}MAKE ADMIN{% endif %}</span>
+      </button>
+      {% else %}
+      <span style="font-size:0.72rem;color:var(--muted);align-self:center;">You</span>
+      {% endif %}
+    </div>
+
+  </div>
+  {% endfor %}
+</div>
+
 {% endblock %}
