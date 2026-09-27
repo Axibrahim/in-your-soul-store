@@ -24,9 +24,15 @@
         <input type="password" name="password" placeholder="••••••••" required autocomplete="current-password"/>
       </div>
 
-      <div class="check-field">
-        <input type="checkbox" name="remember" id="remember"/>
-        <label for="remember">Keep me logged in</label>
+      <div class="check-field remember-toggle">
+        <label class="toggle-switch">
+          <input type="checkbox" name="remember" id="remember"/>
+          <span class="toggle-track">
+            <span class="toggle-knob"></span>
+          </span>
+          <canvas class="toggle-fx" id="remember-fx"></canvas>
+        </label>
+        <label for="remember" class="toggle-text">Keep me logged in</label>
       </div>
 
       <div style="text-align:right; margin:-0.4rem 0 1rem;">

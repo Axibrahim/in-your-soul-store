@@ -1488,6 +1488,82 @@ body.nav-open {
   cursor: pointer;
 }
 
+/* ── Remember-me toggle (login page) ────────────── */
+
+.toggle-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 44px;
+  height: 24px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.toggle-switch input[type="checkbox"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.toggle-track {
+  position: absolute;
+  inset: 0;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  transition: var(--transition);
+}
+
+.toggle-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: var(--transition);
+}
+
+.toggle-switch input:checked ~ .toggle-track {
+  background: var(--accent-glow);
+  border-color: var(--border-active);
+}
+
+.toggle-switch input:checked ~ .toggle-track .toggle-knob {
+  transform: translateX(20px);
+  background: var(--accent);
+  box-shadow: var(--glow);
+}
+
+.toggle-switch input:focus-visible ~ .toggle-track {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.toggle-fx {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 90px;
+  height: 60px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.toggle-text {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
 .form-divider {
   text-align: center;
   font-size: 0.75rem;
@@ -1666,6 +1742,22 @@ body.nav-open {
   font-size: 0.85rem;
   color: var(--text-dim);
   line-height: 1.7;
+}
+
+/* Numbered stat rows used on the About page (IDENTITY / SERVICE panels).
+   Replaces the old inline style="... {% if loop.last %}..." pattern -
+   same visual result, but keeps Jinja logic out of a style attribute
+   (which editors' CSS linters can't parse and will flag as broken CSS). */
+.stat-row {
+  display: flex;
+  gap: 1.5rem;
+  padding: 1.25rem 0;
+  border-bottom: 1px solid var(--border);
+  align-items: flex-start;
+}
+
+.stat-row:last-child {
+  border-bottom: none;
 }
 
 /* ============================================ ADMIN */

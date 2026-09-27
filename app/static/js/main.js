@@ -163,6 +163,86 @@ function initCyberRain(canvasId) {
 
 initCyberRain('cyber-canvas');
 
+// ── REMEMBER-ME TOGGLE FX (login page only - no-ops everywhere else) ──
+function initRememberToggle() {
+  const checkbox = document.getElementById('remember');
+  const canvas = document.getElementById('remember-fx');
+  if (!checkbox || !canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  function resize() {
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize, { passive: true });
+
+  let particles = [];
+  let rafId = null;
+  let ambientTimer = null;
+
+  function knobPos() {
+    // Knob center in canvas-local coords (canvas is centered on the switch)
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+    const offset = checkbox.checked ? 10 : -10;
+    return { x: cx + offset, y: cy };
+  }
+
+  function spawn(count) {
+    const { x, y } = knobPos();
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 0.5 + Math.random() * 1.5;
+      particles.push({
+        x, y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 0.3,
+        life: 0,
+        maxLife: 24 + Math.random() * 20,
+        size: 1 + Math.random() * 1.5,
+      });
+    }
+    if (!rafId) loop();
+  }
+
+  function loop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles = particles.filter(p => p.life < p.maxLife);
+    particles.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy -= 0.01;
+      p.life++;
+      const alpha = 1 - p.life / p.maxLife;
+      ctx.fillStyle = `rgba(118, 255, 3, ${alpha * 0.9})`;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    rafId = particles.length > 0 ? requestAnimationFrame(loop) : null;
+  }
+
+  function startAmbient() {
+    clearInterval(ambientTimer);
+    ambientTimer = setInterval(() => {
+      if (checkbox.checked && Math.random() > 0.5) spawn(1);
+    }, 500);
+  }
+
+  checkbox.addEventListener('change', () => {
+    spawn(checkbox.checked ? 14 : 6);
+    checkbox.checked ? startAmbient() : clearInterval(ambientTimer);
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) clearInterval(ambientTimer);
+    else if (checkbox.checked) startAmbient();
+  });
+}
+
+initRememberToggle();
+
 // ── PRODUCT GALLERY THUMBS ─────────────────────
 document.querySelectorAll('.product-thumb').forEach(thumb => {
   thumb.addEventListener('click', () => {
