@@ -81,6 +81,44 @@
   </div>
 </section>
 
+<!-- SERVICE -->
+<section class="section">
+  <div class="section-inner">
+    <div class="section-header reveal" style="margin-bottom:3rem;">
+      <div class="section-eyebrow">AFTER THE DROP</div>
+      <h2>Refund Requests</h2>
+      <div class="section-divider"></div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:6rem; align-items:center;">
+      <div class="reveal">
+        <p style="color:var(--text-dim); line-height:1.9; margin-bottom:1.25rem;">
+          Every drop is final, but we still stand behind what we make. If something arrives
+          damaged, wrong, or doesn't fit right, you can open a refund request straight from
+          your account — no back-and-forth over DMs.
+        </p>
+        <p style="color:var(--text-dim); line-height:1.9;">
+          Attach a photo as proof, tell us what happened, and our team reviews it directly
+          against the order. No hidden hoops — just a straight line from your order to a
+          resolution.
+        </p>
+      </div>
+
+      <div class="reveal" style="background:var(--panel); border:1px solid var(--border); padding:3rem; position:relative;">
+        <div style="position:absolute; top:-1px; left:2rem; right:2rem; height:2px; background:var(--accent); box-shadow:var(--glow);"></div>
+        {% for stat in [('01', 'REQUEST FROM YOUR ACCOUNT', 'Open a refund request on any past order in a couple of taps.'), ('02', 'PHOTO PROOF', 'Upload an image showing the issue with the item.'), ('03', 'REVIEWED BY US', 'Our team checks every request against the order before deciding.')] %}
+        <div style="display:flex; gap:1.5rem; padding:1.25rem 0; border-bottom:1px solid var(--border); {% if loop.last %}border-bottom:none;{% endif %} align-items:flex-start;">
+          <span style="font-family:var(--font-display); font-size:0.65rem; color:var(--accent); letter-spacing:0.1em; padding-top:0.2rem;">{{ stat[0] }}</span>
+          <div>
+            <div style="font-family:var(--font-display); font-size:0.8rem; letter-spacing:0.12em; color:var(--text); margin-bottom:0.35rem;">{{ stat[1] }}</div>
+            <div style="font-size:0.85rem; color:var(--text-dim);">{{ stat[2] }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- CTA -->
 <section style="padding:8rem 2rem; text-align:center; border-bottom:1px solid var(--border);">
   <div class="reveal">
