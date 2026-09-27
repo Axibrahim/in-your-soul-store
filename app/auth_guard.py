@@ -125,10 +125,15 @@ def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         if current_user.is_authenticated and not validate_session_token():
-            # Token invalid → kill the session, redirect to login
+            # Token invalid → kill the session, redirect to login.
+            # session.clear() must run BEFORE logout_user(): logout_user()
+            # marks the remember-me cookie for deletion via a session flag,
+            # and if session.clear() runs after it wipes that flag before
+            # Flask-Login's after_request hook can act on it - leaving the
+            # remember cookie alive and causing a redirect loop next visit.
             from flask_login import logout_user
-            logout_user()
             session.clear()
+            logout_user()
             flash('Your session has expired or was invalidated. Please log in again.', 'danger')
             return redirect(url_for('auth.login'))
         return f(*args, **kwargs)
@@ -155,8 +160,8 @@ def token_required_admin(f):
 
         if not validate_session_token():
             from flask_login import logout_user
-            logout_user()
             session.clear()
+            logout_user()
             flash('Admin session expired. Please log in again.', 'danger')
             return redirect(url_for('auth.login'))
 
@@ -184,7 +189,7 @@ def register_token_hooks(app):
 
         if current_user.is_authenticated and not validate_session_token():
             from flask_login import logout_user
-            logout_user()
             session.clear()
+            logout_user()
             flash('Your session expired. Please log in again.', 'danger')
             return redirect(url_for('auth.login'))
