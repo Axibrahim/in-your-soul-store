@@ -63,6 +63,7 @@ def login():
             
             issue_session_token(user)
             db.session.commit()
+            session.permanent = bool(remember)
             login_user(user, remember=bool(remember))
             
             next_page = _safe_next_url(request.args.get('next'))
@@ -241,6 +242,7 @@ def verify_email(token):
         flash('Database update error. Please try again.', 'danger')
         return redirect(url_for('auth.login'))
 
+    session.permanent = True
     login_user(user, remember=True)
     flash('Email verified! You are now logged in.', 'success')
     return redirect(url_for('main.index'))

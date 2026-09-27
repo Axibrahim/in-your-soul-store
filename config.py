@@ -41,6 +41,7 @@ class Config:
     UPLOAD_FOLDER = os.path.join(basedir, "app", "static", "images", "products")
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
     REMEMBER_COOKIE_DURATION = timedelta(days=30)
+    PERMANENT_SESSION_LIFETIME = timedelta(days=30)  # keep the session cookie's lifetime matched to REMEMBER_COOKIE_DURATION, so the custom auth token in it survives exactly as long as the remember-me cookie does
     WTF_CSRF_ENABLED = True
 
     EMAIL_VERIFY_MAX_AGE_SECONDS = 3600  # 1 hour
