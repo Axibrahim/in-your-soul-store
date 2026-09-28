@@ -1,3 +1,4 @@
+import secrets
 from urllib.parse import urlparse
 from app.password_policy import validate_password
 from flask import (
@@ -11,6 +12,7 @@ from flask import (
     url_for,
 )
 from flask_login import current_user, login_required, login_user, logout_user
+from sqlalchemy.exc import IntegrityError
 
 from app import limiter
 from app.auth_guard import issue_session_token, revoke_session_token
@@ -73,6 +75,77 @@ def login():
             flash('Invalid username or password.', 'danger')
 
     return render_template('auth/login.html')
+
+
+def _generate_guest_username():
+    """Next free 'guestN' username. Not perfectly atomic under heavy
+    concurrency, but the create step below retries on a collision anyway,
+    so this only needs to be a good starting guess."""
+    n = User.query.filter(User.username.like('guest%')).count() + 1
+    while User.query.filter_by(username=f'guest{n}').first():
+        n += 1
+    return f'guest{n}'
+
+
+@auth_bp.route('/guest', methods=['GET', 'POST'])
+@limiter.limit('5 per hour', methods=['POST'])
+def guest_checkout():
+    if current_user.is_authenticated:
+        next_page = _safe_next_url(request.values.get('next'))
+        return redirect(next_page or url_for('main.index'))
+
+    if request.method == 'POST':
+        first_name = request.form.get('first_name', '').strip()
+        last_name = request.form.get('last_name', '').strip()
+        phone = request.form.get('phone', '').strip()
+        next_url = request.form.get('next', '')
+
+        if not first_name or not last_name:
+            flash('Please enter your first and last name.', 'danger')
+            return render_template('auth/guest_checkout.html', next=next_url)
+
+        if not phone.replace('+', '').replace(' ', '').isdigit() or len(phone) < 8:
+            flash('Please enter a valid phone number.', 'danger')
+            return render_template('auth/guest_checkout.html', next=next_url)
+
+        # Retry on the (rare) chance two guests grab the same 'guestN' at
+        # once - the DB's unique constraint on username is the real guard,
+        # this just recovers from it instead of failing the checkout.
+        for attempt in range(5):
+            username = _generate_guest_username()
+            user = User(
+                username=username,
+                first_name=first_name,
+                last_name=last_name,
+                phone=phone,
+                email=None,
+                email_verified=False,
+            )
+            # Guest never needs this password - it's only set because the
+            # column is non-nullable. They authenticate purely by being
+            # logged in right now; if they come back later without a
+            # session, there's no way back into a guest account by design,
+            # matching how a one-time guest checkout should behave.
+            user.set_password(secrets.token_urlsafe(32))
+            db.session.add(user)
+            try:
+                db.session.commit()
+                break
+            except IntegrityError:
+                db.session.rollback()
+        else:
+            flash('Something went wrong setting up guest checkout. Please try again.', 'danger')
+            return render_template('auth/guest_checkout.html', next=next_url)
+
+        issue_session_token(user)
+        db.session.commit()
+        login_user(user, remember=False)
+
+        next_page = _safe_next_url(next_url)
+        flash(f'Continuing as guest, {user.first_name}.', 'success')
+        return redirect(next_page or url_for('main.index'))
+
+    return render_template('auth/guest_checkout.html', next=request.args.get('next', ''))
 
 
 @auth_bp.route('/forgot-password', methods=['GET', 'POST'])

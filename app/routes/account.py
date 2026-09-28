@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from app.models import User, Address, Order, RefundRequest, RefundImage, db
 from app.routes.main import _maybe_cancel_expired_orders
 from app.password_policy import validate_password
-from app.email import send_refund_request_email
+from app.email import send_refund_request_email, generate_verify_token, send_verification_email
 from datetime import datetime, timedelta
 
 account_bp = Blueprint('account', __name__)
@@ -57,6 +57,59 @@ def profile():
         return redirect(url_for('account.profile'))
 
     return render_template('account/profile.html')
+
+
+@account_bp.route('/complete-registration', methods=['GET', 'POST'])
+@login_required
+def complete_registration():
+    if not current_user.is_guest:
+        flash('Your account is already complete.', 'info')
+        return redirect(url_for('account.profile'))
+
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip().lower()
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+        confirm = request.form.get('confirm_password', '')
+
+        if not all([username, email, password, confirm]):
+            flash('All fields are required.', 'danger')
+            return render_template('account/complete_registration.html')
+
+        if '@' not in email or '.' not in email.split('@')[-1]:
+            flash('Please enter a valid email address.', 'danger')
+            return render_template('account/complete_registration.html')
+
+        if password != confirm:
+            flash('Passwords do not match.', 'danger')
+            return render_template('account/complete_registration.html')
+
+        errors = validate_password(password, username=username, email=email)
+        if errors:
+            flash('Password too weak: ' + ' '.join(errors), 'danger')
+            return render_template('account/complete_registration.html')
+
+        if User.query.filter(User.email == email, User.id != current_user.id).first():
+            flash('Email already registered.', 'danger')
+            return render_template('account/complete_registration.html')
+
+        if User.query.filter(db.func.lower(User.username) == username, User.id != current_user.id).first():
+            flash('Username already taken.', 'danger')
+            return render_template('account/complete_registration.html')
+
+        current_user.username = username
+        current_user.email = email
+        current_user.email_verified = False
+        current_user.set_password(password)
+        db.session.commit()
+
+        token = generate_verify_token(email)
+        send_verification_email(email, token, first_name=current_user.first_name)
+
+        flash('Almost there! Check your email to verify and finish setting up your account.', 'info')
+        return redirect(url_for('account.profile'))
+
+    return render_template('account/complete_registration.html')
 
 
 @account_bp.route('/change-password', methods=['POST'])

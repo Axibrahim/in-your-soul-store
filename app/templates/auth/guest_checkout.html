@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block title %}Continue as Guest — IN YOUR SOUL{% endblock %}
+
+{% block content %}
+<div class="form-page">
+  <div class="form-card">
+    <div class="form-logo">
+      <svg width="260" height="30" viewBox="0 0 260 30" fill="none">
+        <text x="0" y="24" font-family="Space Mono" font-weight="700" font-size="24" fill="#76ff03" letter-spacing="4">#IN YOUR SOUL</text>
+      </svg>
+    </div>
+    <div class="form-title">Continue as Guest</div>
+    <p style="font-size:0.85rem; color:var(--text-dim); margin-bottom:1.5rem;">
+      Just enough to get your order out the door — no password, no email required.
+      You can turn this into a full account anytime from your order confirmation.
+    </p>
+
+    <form method="POST" action="{{ url_for('auth.guest_checkout') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <input type="hidden" name="next" value="{{ next }}"/>
+
+      <div class="field-row">
+        <div class="field">
+          <label>FIRST NAME</label>
+          <input type="text" name="first_name" placeholder="First Name" required/>
+        </div>
+        <div class="field">
+          <label>LAST NAME</label>
+          <input type="text" name="last_name" placeholder="Last Name" required/>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>PHONE NUMBER</label>
+        <input type="tel" name="phone" placeholder="01xxxxxxxxx" required autocomplete="tel"/>
+      </div>
+
+      <button type="submit" class="btn btn--primary btn--full" style="margin-top:0.5rem;">
+        <span>CONTINUE →</span>
+      </button>
+    </form>
+
+    <div class="form-divider">OR</div>
+
+    <div style="text-align:center; font-size:0.85rem; color:var(--text-dim);">
+      Prefer an account?
+      <a href="{{ url_for('auth.register') }}" style="color:var(--accent); margin-left:0.35rem;">Create Account →</a>
+      <br/>
+      <a href="{{ url_for('auth.login', next=next) }}" style="color:var(--accent);">Login →</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

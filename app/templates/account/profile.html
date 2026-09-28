@@ -13,6 +13,16 @@
     </div>
   </div>
 
+  {% if current_user.is_guest %}
+  <div style="background:var(--panel); border:1px solid var(--accent); padding:1.5rem; margin-bottom:2rem; display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
+    <div>
+      <div style="font-family:var(--font-display); font-size:0.75rem; letter-spacing:0.1em; color:var(--accent); margin-bottom:0.35rem;">GUEST ACCOUNT</div>
+      <div style="font-size:0.85rem; color:var(--text-dim);">Add a username, email, and password to turn this into a real account you can log back into.</div>
+    </div>
+    <a href="{{ url_for('account.complete_registration') }}" class="btn btn--sm btn--primary"><span>COMPLETE ACCOUNT</span></a>
+  </div>
+  {% endif %}
+
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start;">
 
     <!-- PROFILE INFO -->
@@ -37,7 +47,7 @@
         </div>
         <div class="field">
           <label>EMAIL ADDRESS</label>
-          <input type="email" value="{{ current_user.email }}" disabled style="opacity:0.5;cursor:not-allowed;"/>
+          <input type="email" value="{{ current_user.email or 'Not set — complete your account to add one' }}" disabled style="opacity:0.5;cursor:not-allowed;"/>
           <div class="field-note">Email cannot be changed. Contact support if needed.</div>
         </div>
         <div class="field">
@@ -50,6 +60,10 @@
 
     <!-- CHANGE PASSWORD -->
     <div style="background:var(--panel);border:1px solid var(--border);padding:2rem;">
+      {% if current_user.is_guest %}
+      <div style="font-family:var(--font-display);font-size:0.65rem;letter-spacing:0.2em;color:var(--text-dim);margin-bottom:1.5rem;">CHANGE PASSWORD</div>
+      <p style="font-size:0.85rem;color:var(--text-dim);">Guest accounts don't have a password yet — use <a href="{{ url_for('account.complete_registration') }}" style="color:var(--accent);">Complete Account</a> above to set one.</p>
+      {% else %}
       <div style="font-family:var(--font-display);font-size:0.65rem;letter-spacing:0.2em;color:var(--text-dim);margin-bottom:1.5rem;">CHANGE PASSWORD</div>
       <form method="POST" action="{{ url_for('account.change_password') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
@@ -83,6 +97,7 @@
         </div>
         <button type="submit" class="btn btn--full"><span>CHANGE PASSWORD</span></button>
       </form>
+      {% endif %}
 
       <!-- ACCOUNT INFO -->
       <div style="border-top:1px solid var(--border);margin-top:2rem;padding-top:1.5rem;">

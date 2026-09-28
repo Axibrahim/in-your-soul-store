@@ -33,6 +33,13 @@ class User(db.Model, UserMixin):
     def check_password(self, password):
         return bcrypt.check_password_hash(self.password_hash, password)
 
+    @property
+    def is_guest(self):
+        # Real registration always requires an email; guest checkout never
+        # sets one until the person completes their account. No new DB
+        # column needed - this reads off the existing `email` column.
+        return self.email is None
+
     def __repr__(self):
         return f'<User {self.username}>'
 

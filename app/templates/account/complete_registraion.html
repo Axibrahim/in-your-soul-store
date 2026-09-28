@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block title %}Complete Your Account — FREKS{% endblock %}
+
+{% block content %}
+<div class="form-page">
+  <div class="form-card" style="max-width:560px;">
+    <div class="form-logo">
+      <svg width="260" height="30" viewBox="0 0 260 30" fill="none">
+        <text x="0" y="24" font-family="Space Mono" font-weight="700" font-size="24" fill="#76ff03" letter-spacing="4">#IN YOUR SOUL</text>
+      </svg>
+    </div>
+    <div class="form-title">Complete Your Account</div>
+    <p style="font-size:0.85rem; color:var(--text-dim); margin-bottom:1.5rem;">
+      Set a username, email, and password to turn your guest checkout into a full
+      account — track orders, save addresses, and log back in anytime.
+    </p>
+
+    <form method="POST" action="{{ url_for('account.complete_registration') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+      <div class="field">
+        <label>USERNAME</label>
+        <input type="text" name="username" placeholder="Nick name" required autocomplete="username"/>
+      </div>
+
+      <div class="field">
+        <label>EMAIL</label>
+        <input type="email" name="email" placeholder="you@example.com" required autocomplete="email"/>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label>PASSWORD</label>
+          <input type="password" name="password" placeholder="Min. 10 characters" required autocomplete="new-password" data-password-policy data-policy-list="pw-rules-complete"/>
+        </div>
+
+        <div class="field">
+          <label>CONFIRM PASSWORD</label>
+          <input type="password" name="confirm_password" placeholder="Repeat password" required autocomplete="new-password"/>
+        </div>
+      </div>
+
+      <ul class="pw-rules" id="pw-rules-complete">
+        <li data-rule="length">At least 10 characters</li>
+        <li data-rule="lower">A lowercase letter</li>
+        <li data-rule="upper">An uppercase letter</li>
+        <li data-rule="digit">A number</li>
+        <li data-rule="symbol">A symbol (! @ # $ %)</li>
+      </ul>
+
+      <button type="submit" class="btn btn--primary btn--full" style="margin-top:0.5rem;">
+        <span>COMPLETE ACCOUNT</span>
+      </button>
+    </form>
+
+    <div class="form-divider">OR</div>
+
+    <div style="text-align:center; font-size:0.85rem; color:var(--text-dim);">
+      <a href="{{ url_for('account.profile') }}" style="color:var(--accent);">Back to Profile →</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/password-policy.js') }}"></script>
+{% endblock %}
