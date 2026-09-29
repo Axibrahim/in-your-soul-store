@@ -46,14 +46,14 @@
 
     <div class="form-divider">OR</div>
 
-    <div style="text-align:center; font-size:0.85rem; color:var(--text-dim); margin-bottom:1rem;">
+    <a href="{{ url_for('auth.guest_checkout', next=request.args.get('next', '')) }}" class="btn btn--full" style="text-align:center; margin-bottom:1rem;">
+      <span>CONTINUE AS GUEST →</span>
+    </a>
+
+    <div style="text-align:center; font-size:0.85rem; color:var(--text-dim);">
       New to IN YOUR SOUL?
       <a href="{{ url_for('auth.register') }}" style="color:var(--accent); margin-left:0.35rem;">Create Account →</a>
     </div>
-
-    <a href="{{ url_for('auth.guest_checkout', next=request.args.get('next', '')) }}" class="btn btn--full" style="text-align:center;">
-      <span>CONTINUE AS GUEST →</span>
-    </a>
   </div>
 </div>
 {% endblock %}
