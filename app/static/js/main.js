@@ -673,3 +673,75 @@ document.querySelectorAll('img[data-hide-on-error]').forEach((img) => {
     if (e.key === 'Escape') setAdminMenu(false);
   });
 })();
+
+
+// ── ADMIN: DELETE USER (double tap) ────────────
+document.querySelectorAll('.delete-user-btn').forEach(btn => {
+  const label = btn.querySelector('span');
+  const original = label.textContent;
+  let armed = false;
+  let timer = null;
+  let warn = null;
+
+  const reset = () => {
+    armed = false;
+    btn.disabled = false;
+    label.textContent = original;
+    clearTimeout(timer);
+    if (warn) { warn.remove(); warn = null; }
+  };
+
+  btn.addEventListener('click', async () => {
+    // 1st tap: arm + reveal warning
+    if (!armed) {
+      armed = true;
+      label.textContent = 'TAP AGAIN TO DELETE';
+
+      const name = (btn.dataset.name || 'this user').trim();
+      const orders = parseInt(btn.dataset.orders, 10) || 0;
+      const refunds = parseInt(btn.dataset.refunds, 10) || 0;
+      const addresses = parseInt(btn.dataset.addresses, 10) || 0;
+
+      warn = document.createElement('div');
+      warn.className = 'delete-warning';
+      if (orders > 0 || refunds > 0) {
+        warn.textContent =
+          `⚠ ${name} has ${orders} order(s) and ${refunds} refund request(s). ` +
+          `Confirming will permanently delete ALL their orders, order items, ` +
+          `refund requests` + (addresses ? ` and ${addresses} address(es)` : '') +
+          `, plus the account. This cannot be undone.`;
+      } else {
+        warn.textContent =
+          `Permanently delete ${name}` +
+          (addresses ? ` and ${addresses} saved address(es)` : '') +
+          `? This cannot be undone.`;
+      }
+      (btn.closest('.user-mobile-card, td')).appendChild(warn);
+
+      timer = setTimeout(reset, 6000);
+      return;
+    }
+
+    // 2nd tap: delete
+    clearTimeout(timer);
+    btn.disabled = true;
+    label.textContent = 'DELETING...';
+    try {
+      const res = await fetch(`/admin/users/${btn.dataset.id}/delete`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF_TOKEN }
+      });
+      const data = await res.json();
+      if (data.success) {
+        document.querySelectorAll(`[data-user-row="${btn.dataset.id}"]`).forEach(el => el.remove());
+        showToast(data.message || 'User deleted.');
+      } else {
+        showToast(data.error || 'Failed to delete user.', 'danger');
+        reset();
+      }
+    } catch {
+      showToast('Failed to delete user.', 'danger');
+      reset();
+    }
+  });
+});

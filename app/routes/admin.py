@@ -134,11 +134,18 @@ def dashboard():
         Order.status.in_(['confirmed', 'shipped', 'delivered'])
     ).scalar() or 0
 
+    # session_issued_at is refreshed on every authenticated request (auth_guard),
+    # so it works as a "last seen" timestamp. No new column / migration needed.
+    active_24h = User.query.filter(
+        User.session_issued_at >= datetime.utcnow() - timedelta(hours=24)
+    ).count()
+
     return render_template('admin/dashboard.html',
                            total_orders=total_orders,
                            pending_orders=pending_orders,
                            total_products=total_products,
                            total_users=total_users,
+                           active_24h=active_24h,
                            recent_orders=recent_orders,
                            revenue=revenue)
 
@@ -350,6 +357,61 @@ def toggle_product(product_id):
     product.is_active = not product.is_active
     db.session.commit()
     return jsonify({'success': True, 'is_active': product.is_active})
+
+
+@admin_bp.route('/users/<int:user_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_user(user_id):
+    from app.models import Address, RefundRequest, RefundImage
+
+    user = User.query.get_or_404(user_id)
+
+    if user.id == current_user.id:
+        return jsonify({'success': False, 'error': "You can't delete your own account."}), 400
+    if user.is_admin:
+        return jsonify({'success': False, 'error': 'Remove admin role first, then delete.'}), 400
+
+    uid = user.id
+    name = f'{user.first_name or ""} {user.last_name or ""}'.strip() or user.username
+
+    order_ids = [r[0] for r in db.session.query(Order.id).filter(Order.user_id == uid).all()]
+
+    refund_filter = RefundRequest.user_id == uid
+    if order_ids:
+        refund_filter = db.or_(refund_filter, RefundRequest.order_id.in_(order_ids))
+    refund_ids = [r[0] for r in db.session.query(RefundRequest.id).filter(refund_filter).all()]
+
+    image_urls = []
+    if refund_ids:
+        image_urls = [r[0] for r in db.session.query(RefundImage.image_url)
+                      .filter(RefundImage.refund_request_id.in_(refund_ids)).all()]
+
+    try:
+        # children first, parent last (FK order); only rows tied to this user id
+        if refund_ids:
+            RefundImage.query.filter(RefundImage.refund_request_id.in_(refund_ids)).delete(synchronize_session=False)
+            RefundRequest.query.filter(RefundRequest.id.in_(refund_ids)).delete(synchronize_session=False)
+        if order_ids:
+            OrderItem.query.filter(OrderItem.order_id.in_(order_ids)).delete(synchronize_session=False)
+            Order.query.filter(Order.id.in_(order_ids)).delete(synchronize_session=False)
+        Address.query.filter_by(user_id=uid).delete(synchronize_session=False)
+        User.query.filter_by(id=uid).delete(synchronize_session=False)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Failed to delete user %s", uid)
+        return jsonify({'success': False, 'error': 'Could not delete user. Nothing was changed.'}), 500
+
+    # best-effort cleanup of refund photos in Supabase (they live in refunds/)
+    if supabase and image_urls:
+        try:
+            paths = ['refunds/' + u.rstrip('/').split('/')[-1] for u in image_urls]
+            supabase.storage.from_(BUCKET_NAME).remove(paths)
+        except Exception as e:
+            current_app.logger.warning("Refund image cleanup failed for user %s: %s", uid, e)
+
+    return jsonify({'success': True, 'message': f'{name} and all related data deleted.'})
 
 
 @admin_bp.route('/orders')

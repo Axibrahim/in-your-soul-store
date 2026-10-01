@@ -1,32 +1,80 @@
 {% extends 'admin/base.html' %}
-
 {% block title %}Edit {{ product.name }}{% endblock %}
-
 {% block page_title %}EDIT PRODUCT{% endblock %}
 
 {% block content %}
 
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem;flex-wrap:wrap;gap:1rem;">
-  <h2 style="font-size:1.25rem;">Edit: {{ product.name }}</h2>
-  <a href="{{ url_for('admin.products') }}" class="btn btn--ghost btn--sm">
-    <span>← BACK</span>
-  </a>
-</div>
+<style>
+  .ep-head { display:flex; justify-content:space-between; align-items:center; gap:.75rem; margin-bottom:1.25rem; }
+  .ep-head h2 { font-size:1.1rem; min-width:0; word-break:break-word; }
 
-<!-- MAIN EDIT FORM -->
-<form method="POST" enctype="multipart/form-data">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+  .ep-grid {
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 340px;
+    grid-template-areas:"info stock" "images stock";
+    gap:1.5rem; align-items:start;
+  }
+  .ep-info { grid-area:info; }
+  .ep-images { grid-area:images; }
+  .ep-stock { grid-area:stock; position:sticky; top:4.5rem; }
 
-  <div style="display:grid;grid-template-columns:1fr 360px;gap:2rem;align-items:start;" class="admin-grid">
+  .ep-card { background:var(--panel); border:1px solid var(--border); padding:1.5rem; }
+  .ep-title { font-family:var(--font-display); font-size:.65rem; letter-spacing:.2em; color:var(--text-dim); margin-bottom:1.25rem; }
+  .ep-row { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+  .ep-flags { display:flex; gap:1.25rem; flex-wrap:wrap; margin-top:.5rem; }
 
-    <!-- MAIN FIELDS -->
-    <div style="display:flex;flex-direction:column;gap:1.5rem;">
+  .ep-img-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:1.25rem; }
+  .ep-img { width:100%; height:160px; object-fit:cover; border:1px solid var(--border); margin-bottom:.75rem; display:block; }
+  .field .ep-del { display:flex; align-items:center; gap:.5rem; font-size:.8rem; font-weight:normal; text-transform:none; letter-spacing:0; color:var(--text-dim); margin-bottom:.75rem; cursor:pointer; }
+  .field .ep-del input { width:auto; padding:0; }
 
-      <!-- PRODUCT INFO -->
-      <div style="background:var(--panel);border:1px solid var(--border);padding:2rem;">
-        <div style="font-family:var(--font-display);font-size:0.65rem;letter-spacing:0.2em;color:var(--text-dim);margin-bottom:1.5rem;">
-          PRODUCT INFO
-        </div>
+  .ep-sizes { display:grid; grid-template-columns:repeat(3,1fr); gap:.75rem; }
+  .ep-sub { font-family:var(--font-display); font-size:.6rem; letter-spacing:.15em; color:var(--text-dim); margin:1.25rem 0 .75rem; }
+  .ep-opt-grid { display:grid; grid-template-columns:1fr 1fr; gap:.75rem; }
+  .ep-opt { border:1px solid var(--border); padding:.75rem; }
+  .ep-opt input[type="number"] { width:100%; margin-top:.6rem; }
+
+  .ep-savebar { margin-top:1.25rem; }
+
+  .ep-danger { margin-top:1.5rem; background:var(--panel); border:1px solid var(--border); }
+  .ep-danger summary { padding:1rem 1.25rem; cursor:pointer; font-family:var(--font-display); font-size:.65rem; letter-spacing:.2em; color:var(--danger); }
+  .ep-danger-body { padding:0 1.25rem 1.25rem; display:flex; flex-direction:column; gap:.75rem; }
+  .ep-hint { font-size:.72rem; color:var(--text-dim); line-height:1.5; }
+
+  @media (max-width:768px) {
+    .ep-page { padding-bottom:5.5rem; }
+    .ep-grid { grid-template-columns:1fr; grid-template-areas:"info" "stock" "images"; gap:1rem; }
+    .ep-stock { position:static; }
+    .ep-card { padding:1rem; }
+    .ep-img-grid { grid-template-columns:1fr 1fr; gap:.75rem; }
+    .ep-img { height:120px; }
+    .ep input, .ep select, .ep textarea { font-size:16px; } /* stops iOS zoom on focus */
+    .ep-savebar {
+      position:fixed; left:0; right:0; bottom:0; z-index:90; margin:0;
+      padding:.75rem .85rem calc(.75rem + env(safe-area-inset-bottom));
+      background:var(--panel); border-top:1px solid var(--border);
+    }
+  }
+  @media (max-width:420px) {
+    .ep-row { grid-template-columns:1fr; gap:0; }
+  }
+</style>
+
+<div class="ep-page ep">
+
+  <div class="ep-head">
+    <h2>Edit: {{ product.name }}</h2>
+    <a href="{{ url_for('admin.products') }}" class="btn btn--ghost btn--sm"><span>← BACK</span></a>
+  </div>
+
+  <form method="POST" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+    <div class="ep-grid">
+
+      <!-- 1. PRODUCT INFO -->
+      <div class="ep-card ep-info">
+        <div class="ep-title">PRODUCT INFO</div>
 
         <div class="field">
           <label>PRODUCT NAME *</label>
@@ -35,289 +83,126 @@
 
         <div class="field">
           <label>DESCRIPTION</label>
-          <textarea name="description" rows="5">{{ product.description or '' }}</textarea>
+          <textarea name="description" rows="4">{{ product.description or '' }}</textarea>
         </div>
 
-        <div class="field-row" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+        <div class="ep-row">
           <div class="field">
             <label>PRICE (EGP) *</label>
-            <input
-              type="number"
-              name="price"
-              value="{{ product.price }}"
-              step="0.01"
-              min="0"
-              required
-            />
+            <input type="number" name="price" value="{{ product.price }}" step="0.01" min="0" inputmode="decimal" required/>
           </div>
-
           <div class="field">
             <label>CATEGORY</label>
             <select name="category_id">
               <option value="">— No Category —</option>
               {% for cat in categories %}
-              <option
-                value="{{ cat.id }}"
-                {% if product.category_id == cat.id %}selected{% endif %}
-              >
-                {{ cat.name }}
-              </option>
+              <option value="{{ cat.id }}" {% if product.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
               {% endfor %}
             </select>
           </div>
         </div>
 
-        <div style="display:flex;gap:2rem;flex-wrap:wrap;margin-top:1rem;">
+        <div class="ep-flags">
           <div class="check-field">
-            <input
-              type="checkbox"
-              name="is_featured"
-              id="is_featured"
-              {% if product.is_featured %}checked{% endif %}
-            />
-            <label for="is_featured">
-              Show in Latest Hits (swipe section)
-            </label>
+            <input type="checkbox" name="is_featured" id="is_featured" {% if product.is_featured %}checked{% endif %}/>
+            <label for="is_featured">Latest Hits (swipe section)</label>
           </div>
-
           <div class="check-field">
-            <input
-              type="checkbox"
-              name="is_active"
-              id="is_active"
-              {% if product.is_active %}checked{% endif %}
-            />
-            <label for="is_active">
-              Active (visible in shop)
-            </label>
+            <input type="checkbox" name="is_active" id="is_active" {% if product.is_active %}checked{% endif %}/>
+            <label for="is_active">Active (visible in shop)</label>
           </div>
         </div>
       </div>
 
-      <!-- IMAGES -->
-      <div style="background:var(--panel);border:1px solid var(--border);padding:2rem;">
-        <div style="font-family:var(--font-display);font-size:0.65rem;letter-spacing:0.2em;color:var(--text-dim);margin-bottom:1.5rem;">
-          PRODUCT IMAGES
-        </div>
+      <!-- 2. INVENTORY (shows right under info on mobile) -->
+      <div class="ep-card ep-stock">
+        <div class="ep-title">INVENTORY BY SIZE</div>
 
-        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:1.5rem;">
-          
-          <!-- IMAGE 1 -->
-          <div class="field">
-            <label>MAIN IMAGE</label>
-            {% if product.image_url %}
-              <img
-                src="{{ product.image_url }}"
-                style="width:100%;height:160px;object-fit:cover;border:1px solid var(--border);margin-bottom:0.75rem;display:block;"
-                id="preview-1"
-              />
-              <label style="display:flex;align-items:center;gap:0.5rem;font-weight:normal;font-size:0.8rem;color:var(--text-dim);margin-bottom:0.75rem;cursor:pointer;">
-                <input type="checkbox" name="delete_image" value="on"/>
-                Delete this photo
-              </label>
-            {% else %}
-              <img
-                id="preview-1"
-                style="display:none;width:100%;height:160px;object-fit:cover;margin-bottom:0.75rem;border:1px solid var(--border);"
-              />
-            {% endif %}
-            <input
-              type="file"
-              name="image"
-              accept="image/*"
-              data-preview="preview-1"
-            />
-          </div>
-
-          <!-- IMAGE 2 -->
-          <div class="field">
-            <label>SECOND IMAGE (HOVER)</label>
-            {% if product.image_url_2 %}
-              <img
-                src="{{ product.image_url_2 }}"
-                style="width:100%;height:160px;object-fit:cover;border:1px solid var(--border);margin-bottom:0.75rem;display:block;"
-                id="preview-2"
-              />
-              <label style="display:flex;align-items:center;gap:0.5rem;font-weight:normal;font-size:0.8rem;color:var(--text-dim);margin-bottom:0.75rem;cursor:pointer;">
-                <input type="checkbox" name="delete_image2" value="on"/>
-                Delete this photo
-              </label>
-            {% else %}
-              <img
-                id="preview-2"
-                style="display:none;width:100%;height:160px;object-fit:cover;margin-bottom:0.75rem;border:1px solid var(--border);"
-              />
-            {% endif %}
-            <input
-              type="file"
-              name="image2"
-              accept="image/*"
-              data-preview="preview-2"
-            />
-          </div>
-
-          <!-- IMAGE 3 -->
-          <div class="field">
-            <label>THIRD IMAGE (OPTIONAL)</label>
-            {% if product.image_url_3 %}
-              <img
-                src="{{ product.image_url_3 }}"
-                style="width:100%;height:160px;object-fit:cover;border:1px solid var(--border);margin-bottom:0.75rem;display:block;"
-                id="preview-3"
-              />
-              <label style="display:flex;align-items:center;gap:0.5rem;font-weight:normal;font-size:0.8rem;color:var(--text-dim);margin-bottom:0.75rem;cursor:pointer;">
-                <input type="checkbox" name="delete_image3" value="on"/>
-                Delete this photo
-              </label>
-            {% else %}
-              <img
-                id="preview-3"
-                style="display:none;width:100%;height:160px;object-fit:cover;margin-bottom:0.75rem;border:1px solid var(--border);"
-              />
-            {% endif %}
-            <input
-              type="file"
-              name="image3"
-              accept="image/*"
-              data-preview="preview-3"
-            />
-          </div>
-
-          <!-- IMAGE 4 -->
-          <div class="field">
-            <label>FOURTH IMAGE (OPTIONAL)</label>
-            {% if product.image_url_4 %}
-              <img
-                src="{{ product.image_url_4 }}"
-                style="width:100%;height:160px;object-fit:cover;border:1px solid var(--border);margin-bottom:0.75rem;display:block;"
-                id="preview-4"
-              />
-              <label style="display:flex;align-items:center;gap:0.5rem;font-weight:normal;font-size:0.8rem;color:var(--text-dim);margin-bottom:0.75rem;cursor:pointer;">
-                <input type="checkbox" name="delete_image4" value="on"/>
-                Delete this photo
-              </label>
-            {% else %}
-              <img
-                id="preview-4"
-                style="display:none;width:100%;height:160px;object-fit:cover;margin-bottom:0.75rem;border:1px solid var(--border);"
-              />
-            {% endif %}
-            <input
-              type="file"
-              name="image4"
-              accept="image/*"
-              data-preview="preview-4"
-            />
-          </div>
-
-        </div>
-      </div>
-    </div>
-
-    <!-- INVENTORY SIDEBAR -->
-    <div style="background:var(--panel);border:1px solid var(--border);padding:2rem;position:sticky;top:4.5rem;">
-      <div style="font-family:var(--font-display);font-size:0.65rem;letter-spacing:0.2em;color:var(--text-dim);margin-bottom:1.5rem;">
-        INVENTORY BY SIZE
-      </div>
-
-      <!-- DEFAULT SIZES -->
-      {% for size in ['M', 'L', 'XL'] %}
-        {% set variant = product.variants | selectattr('size', 'equalto', size) | first %}
-        <div class="field" style="margin-bottom:1rem;">
-          <label>{{ size }}</label>
-          <input
-            type="number"
-            name="stock_{{ size }}"
-            value="{{ variant.stock if variant else 0 }}"
-            min="0"
-            style="width:100%;"
-          />
-        </div>
-      {% endfor %}
-
-      <!-- OPTIONAL SIZES -->
-      <div style="font-family:var(--font-display);font-size:0.6rem;letter-spacing:0.15em;color:var(--text-dim);margin:1.5rem 0 1rem;">
-        OPTIONAL SIZES
-      </div>
-
-      {% for size in ['XS', 'S', 'XXL', 'XXXL'] %}
-        {% set variant = product.variants | selectattr('size', 'equalto', size) | first %}
-        {% set is_enabled = variant and variant.stock > 0 %}
-        
-        <div style="border:1px solid var(--border);padding:1rem;margin-bottom:0.75rem;">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;">
-            <div class="check-field" style="margin:0;">
-              <input
-                type="checkbox"
-                name="enable_{{ size }}"
-                id="enable_{{ size }}"
-                {% if is_enabled %}checked{% endif %}
-              />
-              <label for="enable_{{ size }}">{{ size }}</label>
+        <div class="ep-sizes">
+          {% for size in ['M', 'L', 'XL'] %}
+            {% set variant = product.variants | selectattr('size', 'equalto', size) | first %}
+            <div class="field" style="margin-bottom:0;">
+              <label>{{ size }}</label>
+              <input type="number" name="stock_{{ size }}" value="{{ variant.stock if variant else 0 }}" min="0" inputmode="numeric" style="width:100%;"/>
             </div>
-          </div>
-
-          <div style="margin-top:0.75rem;">
-            <input
-              type="number"
-              name="stock_{{ size }}"
-              id="stock_{{ size }}"
-              value="{{ variant.stock if variant else 0 }}"
-              min="0"
-              style="width:100%;"
-              {% if not is_enabled %}disabled{% endif %}
-            />
-          </div>
+          {% endfor %}
         </div>
-      {% endfor %}
 
-      <button
-        type="submit"
-        class="btn btn--primary btn--full"
-        style="margin-top:1.5rem;"
-      >
-        <span>SAVE CHANGES</span>
-      </button>
+        <div class="ep-sub">OPTIONAL SIZES</div>
 
-</form> <!-- END OF MAIN EDIT FORM -->
+        <div class="ep-opt-grid">
+          {% for size in ['XS', 'S', 'XXL', 'XXXL'] %}
+            {% set variant = product.variants | selectattr('size', 'equalto', size) | first %}
+            {% set is_enabled = variant and variant.stock > 0 %}
+            <div class="ep-opt">
+              <div class="check-field" style="margin:0;">
+                <input type="checkbox" name="enable_{{ size }}" id="enable_{{ size }}" {% if is_enabled %}checked{% endif %}/>
+                <label for="enable_{{ size }}">{{ size }}</label>
+              </div>
+              <input type="number" name="stock_{{ size }}" id="stock_{{ size }}" value="{{ variant.stock if variant else 0 }}" min="0" inputmode="numeric" {% if not is_enabled %}disabled{% endif %}/>
+            </div>
+          {% endfor %}
+        </div>
 
-      <!-- DEACTIVATE FORM -->
-      <form
-        method="POST"
-        action="{{ url_for('admin.deactivate_product', product_id=product.id) }}"
-        onsubmit="return confirm('Deactivate this product? It will remain in the database but will no longer be visible in the shop.')"
-        style="margin-top:0.75rem;"
-      >
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <button type="submit" class="btn btn--ghost btn--full">
-          <span>DEACTIVATE PRODUCT</span>
-        </button>
+        <!-- SAVE (sticky bar on mobile) -->
+        <div class="ep-savebar">
+          <button type="submit" class="btn btn--primary btn--full"><span>SAVE CHANGES</span></button>
+        </div>
+      </div>
+
+      <!-- 3. IMAGES -->
+      <div class="ep-card ep-images">
+        <div class="ep-title">PRODUCT IMAGES</div>
+        <div class="ep-img-grid">
+          {% for field, label, url in [
+            ('image',  'MAIN IMAGE',      product.image_url),
+            ('image2', '2ND (HOVER)',     product.image_url_2),
+            ('image3', '3RD (OPTIONAL)',  product.image_url_3),
+            ('image4', '4TH (OPTIONAL)',  product.image_url_4)
+          ] %}
+          <div class="field">
+            <label>{{ label }}</label>
+            {% if url %}
+              <img src="{{ url }}" class="ep-img" id="preview-{{ loop.index }}"/>
+              <label class="ep-del">
+                <input type="checkbox" name="delete_{{ field }}" value="on"/> Delete this photo
+              </label>
+            {% else %}
+              <img class="ep-img" id="preview-{{ loop.index }}" style="display:none;"/>
+            {% endif %}
+            <input type="file" name="{{ field }}" accept="image/*" data-preview="preview-{{ loop.index }}"/>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+    </div>
+  </form>
+
+  <!-- DANGER ZONE (collapsed by default, double-tap to confirm) -->
+  <details class="ep-danger">
+    <summary>DANGER ZONE</summary>
+    <div class="ep-danger-body">
+
+      <form method="POST" action="{{ url_for('admin.deactivate_product', product_id=product.id) }}"
+            data-double-tap data-confirm-text="TAP AGAIN TO DEACTIVATE">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <button type="submit" class="btn btn--ghost btn--full"><span>DEACTIVATE PRODUCT</span></button>
+        <div class="ep-hint" style="margin-top:.4rem;">Hidden from the shop, stays in the database.</div>
       </form>
 
-      <!-- DELETE FORM -->
-      <form
-        method="POST"
-        action="{{ url_for('admin.delete_product', product_id=product.id) }}"
-        onsubmit="return confirm('PERMANENTLY DELETE this product? This cannot be undone.')"
-        style="margin-top:0.75rem;"
-      >
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <button type="submit" class="btn btn--danger btn--full">
-          <span>DELETE PERMANENTLY</span>
-        </button>
+      <form method="POST" action="{{ url_for('admin.delete_product', product_id=product.id) }}"
+            data-double-tap data-confirm-text="TAP AGAIN TO DELETE FOREVER">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <button type="submit" class="btn btn--danger btn--full"><span>DELETE PERMANENTLY</span></button>
+        <div class="ep-hint" style="margin-top:.4rem;">Not possible if the product is in any order.</div>
       </form>
 
     </div>
-  </div>
+  </details>
 
-<style>
-@media(max-width:768px){
-  .admin-grid {
-    grid-template-columns: 1fr !important;
-  }
-}
-</style>
+</div>
 
-<script src="{{ url_for('static', filename='js/product-form.js') }}"></script>
+<script src="{{ url_for('static', filename='js/product-form.js') }}?v=2"></script>
 
 {% endblock %}

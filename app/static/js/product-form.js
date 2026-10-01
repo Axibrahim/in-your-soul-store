@@ -27,3 +27,24 @@ document.querySelectorAll('input[type="file"][data-preview]').forEach(function(i
     }
   });
 });
+
+
+// Double-tap confirm for destructive forms (inline confirm() is blocked by CSP)
+document.querySelectorAll('form[data-double-tap]').forEach(function (form) {
+  const btn = form.querySelector('button[type="submit"]');
+  const label = btn.querySelector('span');
+  const original = label.textContent;
+  let armed = false;
+  let timer = null;
+
+  form.addEventListener('submit', function (e) {
+    if (armed) return; // second tap → let it submit
+    e.preventDefault();
+    armed = true;
+    label.textContent = form.dataset.confirmText || 'TAP AGAIN TO CONFIRM';
+    timer = setTimeout(function () {
+      armed = false;
+      label.textContent = original;
+    }, 5000);
+  });
+});

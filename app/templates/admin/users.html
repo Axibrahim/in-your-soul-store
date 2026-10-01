@@ -14,6 +14,24 @@
     display: none;
   }
 
+  /* Double-tap delete warning (desktop + mobile) */
+  .delete-warning {
+    margin-top: 0.6rem;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid var(--danger);
+    background: rgba(255, 23, 68, 0.08);
+    color: var(--danger);
+    font-size: 0.72rem;
+    line-height: 1.5;
+    white-space: normal;
+  }
+
+  .user-actions-row {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
   @media (max-width: 768px) {
 
     /* Hide desktop table */
@@ -154,12 +172,12 @@
     </thead>
     <tbody>
       {% for user in users %}
-      <tr>
+      <tr data-user-row="{{ user.id }}">
         <td>
           <div style="font-family:var(--font-display);font-size:0.8rem;">{{ user.first_name }} {{ user.last_name }}</div>
           <div style="font-size:0.72rem;color:var(--text-dim);">@{{ user.username }}</div>
         </td>
-        <td style="font-size:0.82rem;color:var(--text-dim);">{{ user.email }}</td>
+        <td style="font-size:0.82rem;color:var(--text-dim);">{{ user.email or '—' }}</td>
         <td style="font-size:0.82rem;color:var(--text-dim);white-space:nowrap;">{{ user.created_at.strftime('%d %b %Y') }}</td>
         <td>
           <span style="font-family:var(--font-display);">{{ user.orders|length }}</span>
@@ -173,12 +191,28 @@
         </td>
         <td>
           {% if user.id != current_user.id %}
-          <button
-            class="btn btn--sm {% if user.is_admin %}btn--danger{% else %}btn--ghost{% endif %} toggle-admin-btn"
-            data-id="{{ user.id }}"
-          >
-            <span>{% if user.is_admin %}REMOVE ADMIN{% else %}MAKE ADMIN{% endif %}</span>
-          </button>
+          <div class="user-actions-row">
+            <button
+              class="btn btn--sm {% if user.is_admin %}btn--danger{% else %}btn--ghost{% endif %} toggle-admin-btn"
+              data-id="{{ user.id }}"
+            >
+              <span>{% if user.is_admin %}REMOVE ADMIN{% else %}MAKE ADMIN{% endif %}</span>
+            </button>
+
+            {% if not user.is_admin %}
+            <button
+              type="button"
+              class="btn btn--sm btn--danger delete-user-btn"
+              data-id="{{ user.id }}"
+              data-name="{{ user.first_name }} {{ user.last_name }}"
+              data-orders="{{ user.orders|length }}"
+              data-refunds="{{ user.refund_requests|length }}"
+              data-addresses="{{ user.addresses|length }}"
+            >
+              <span>DELETE</span>
+            </button>
+            {% endif %}
+          </div>
           {% else %}
           <span style="font-size:0.72rem;color:var(--muted);">You</span>
           {% endif %}
@@ -196,7 +230,7 @@
 
 <div class="users-mobile">
   {% for user in users %}
-  <div class="user-mobile-card">
+  <div class="user-mobile-card" data-user-row="{{ user.id }}">
 
     <!-- USER HEADER -->
     <div class="user-mobile-header">
@@ -218,7 +252,7 @@
       <!-- EMAIL -->
       <div class="user-mobile-info-item user-mobile-info-item--full">
         <span class="user-mobile-label">EMAIL</span>
-        <span class="user-mobile-value">{{ user.email }}</span>
+        <span class="user-mobile-value">{{ user.email or '—' }}</span>
       </div>
 
       <!-- JOINED -->
@@ -244,6 +278,20 @@
       >
         <span>{% if user.is_admin %}REMOVE ADMIN{% else %}MAKE ADMIN{% endif %}</span>
       </button>
+
+      {% if not user.is_admin %}
+      <button
+        type="button"
+        class="btn btn--sm btn--danger delete-user-btn"
+        data-id="{{ user.id }}"
+        data-name="{{ user.first_name }} {{ user.last_name }}"
+        data-orders="{{ user.orders|length }}"
+        data-refunds="{{ user.refund_requests|length }}"
+        data-addresses="{{ user.addresses|length }}"
+      >
+        <span>DELETE</span>
+      </button>
+      {% endif %}
       {% else %}
       <span style="font-size:0.72rem;color:var(--muted);align-self:center;">You</span>
       {% endif %}
