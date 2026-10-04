@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session
 from flask_login import login_required, current_user
 from app.models import Product, ProductVariant, Order, OrderItem, Address, DiscountCode, db
+from app.email import send_admin_new_order_email
 from app import limiter
 
 cart_bp = Blueprint('cart', __name__)
@@ -366,6 +367,12 @@ def checkout():
             discount.uses_count += 1
 
         db.session.commit()
+
+        try:
+            send_admin_new_order_email(order)
+        except Exception:
+            pass  # never let a notification failure affect the customer's order
+
         session['cart'] = {}
         session.pop('discount_code', None)
         session.modified = True

@@ -302,3 +302,77 @@ def send_refund_status_email(to_email: str, order, refund, first_name: str = "")
             "Failed to send refund status email for order %s", order.order_number
         )
         return False
+
+
+
+
+def send_admin_new_order_email(order) -> bool:
+    """Notifies the store owner that a new order was placed.
+
+    Body is built here (request thread, DB objects available); the actual
+    Resend call runs in a background thread so checkout never waits on it,
+    and any failure is swallowed so it can never break an order.
+    """
+    import threading
+
+    to_email = os.environ.get('ADMIN_NOTIFY_EMAIL')
+    api_key = os.environ.get('RESEND_API_KEY')
+    from_email = os.environ.get('RESEND_ORDERS_FROM_EMAIL') or os.environ.get('RESEND_FROM_EMAIL')
+
+    if not to_email or not api_key or not from_email:
+        current_app.logger.warning(
+            "Admin order notification skipped: ADMIN_NOTIFY_EMAIL / RESEND_API_KEY / from-email missing"
+        )
+        return False
+
+    try:
+        base_url = os.environ.get('BASE_URL', 'https://inyoursoul.store').rstrip('/')
+        user = order.user
+        addr = order.get_shipping_address() or {}
+
+        lines = [
+            f"{i.product_name} ({i.size}) x{i.quantity} — {i.total_price:.0f} EGP"
+            for i in order.items
+        ]
+        addr_parts = [
+            addr.get(k) for k in
+            ('street', 'building', 'floor', 'apartment', 'landmark', 'district', 'governorate')
+            if addr.get(k)
+        ]
+
+        body = (
+            f"New order #{order.order_number}\n\n"
+            f"Customer: {user.first_name or ''} {user.last_name or ''} (@{user.username})\n"
+            f"Phone: {user.phone or '—'}\n"
+            f"Email: {user.email or '— (guest)'}\n\n"
+            f"Items:\n" + "\n".join(lines) + "\n\n"
+            f"Subtotal: {order.subtotal:.0f} EGP\n"
+            f"Shipping: {order.shipping_cost:.0f} EGP\n"
+            f"Discount: -{(order.discount_amount or 0):.0f} EGP"
+            + (f" ({order.discount_code})" if order.discount_code else "") + "\n"
+            f"TOTAL: {order.total:.0f} EGP\n\n"
+            f"Payment: {order.payment_method}\n"
+            f"Address: {', '.join(addr_parts) or '—'}\n"
+            f"Notes: {order.notes or '—'}\n\n"
+            f"Open in admin: {base_url}/admin/orders/{order.id}"
+        )
+        subject = f"🛒 New order #{order.order_number} — {order.total:.0f} EGP"
+        logger = current_app.logger
+    except Exception:
+        current_app.logger.exception("Failed to build admin order notification")
+        return False
+
+    def _send():
+        try:
+            resend.api_key = api_key
+            resend.Emails.send({
+                "from": from_email,
+                "to": [to_email],
+                "subject": subject,
+                "text": body,
+            })
+        except Exception:
+            logger.exception("Failed to send admin order notification")
+
+    threading.Thread(target=_send, daemon=True).start()
+    return True
