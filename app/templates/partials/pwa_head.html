@@ -1,0 +1,23 @@
+{# Everything the browser needs to treat the site as an installable app. Included from base.html and admin/base.html. #}
+<meta name="theme-color" content="#040804">
+<meta name="color-scheme" content="dark">
+<link rel="manifest" href="{{ url_for('pwa.manifest') }}">
+<link rel="icon" href="{{ url_for('pwa.favicon') }}" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='icons/favicon-32.png') }}">
+<link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}?v=1">
+
+{# iOS "Add to Home Screen" #}
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="IN YOUR SOUL">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+
+{# Paint the brand colour at once so the app never flashes white while the stylesheet loads #}
+<style>html{background:#040804}</style>
+
+{# iOS launch screens, one per iPhone size: (css width, css height, pixel ratio) #}
+{% for w, h, r in [(440,956,3),(402,874,3),(430,932,3),(393,852,3),(428,926,3),(390,844,3),(375,812,3),(414,896,3),(414,896,2),(414,736,3),(375,667,2),(320,568,2)] %}
+<link rel="apple-touch-startup-image"
+      media="screen and (device-width: {{ w }}px) and (device-height: {{ h }}px) and (-webkit-device-pixel-ratio: {{ r }}) and (orientation: portrait)"
+      href="{{ url_for('static', filename='splash/iphone-%dx%d.png'|format(w * r, h * r)) }}">
+{% endfor %}

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#040804">
+  <title>Offline — IN YOUR SOUL</title>
+  {# Self-contained on purpose: this page is stored by the service worker and must render with no network, no CSS file and no web fonts. #}
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{background:#040804;-webkit-text-size-adjust:100%}
+    body{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:2rem;
+         background:#040804;color:#e8f5e8;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;text-align:center}
+    main{max-width:340px;display:grid;gap:1.1rem;justify-items:center}
+    img{width:84px;height:84px;border-radius:18px}
+    h1{font-size:1rem;letter-spacing:.28em;color:#76ff03}
+    p{font-size:.85rem;line-height:1.6;color:#7a9a7a}
+    a{display:inline-block;margin-top:.4rem;padding:.85rem 1.6rem;background:#76ff03;color:#040804;text-decoration:none;
+      font-size:.75rem;font-weight:700;letter-spacing:.14em;border-radius:2px}
+  </style>
+</head>
+<body>
+  <main>
+    <img src="/static/icons/icon-192.png" width="84" height="84" alt="">
+    <h1>YOU'RE OFFLINE</h1>
+    <p>No connection right now. Your cart is safe. Reconnect and carry on.</p>
+    <a href="/">TRY AGAIN</a>
+  </main>
+</body>
+</html>

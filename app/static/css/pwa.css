@@ -1,0 +1,79 @@
+/* ============================================
+   PWA + PHONE POLISH  (loads after main.css)
+   ============================================ */
+
+/* iOS inflates text in landscape and waits ~300ms on taps to detect double-tap zoom */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+a, button, input, select, textarea, label, summary, [role="button"] { touch-action: manipulation; }
+
+/* iPhone Safari zooms the whole page whenever a focused field has a font size under 16px.
+   Every .field input was 0.9rem (14.4px), so tapping any form field made the page jump. */
+@media (pointer: coarse) {
+  .field input,
+  .field select,
+  .field textarea,
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  select,
+  textarea { font-size: 16px; }
+
+  /* the full-screen SVG noise filter repaints on every scroll frame on phones; at 3% opacity it is invisible anyway */
+  .noise { display: none; }
+
+  /* 44px minimum touch targets */
+  .nav-burger { width: 44px; height: 44px; flex-basis: 44px; }
+  .qty-btn { width: 40px; height: 40px; }
+}
+
+/* 100vh on iOS is the TALLEST viewport (address bar hidden), which makes pages scroll a little for no reason.
+   dvh follows the real visible height. */
+@supports (height: 100dvh) {
+  body, .cart-page, .form-page, .admin-layout, .account-layout { min-height: 100dvh; }
+}
+@media (min-width: 769px) {
+  @supports (height: 100dvh) { .admin-sidebar { height: 100dvh; } }
+}
+@media (max-width: 768px) {
+  @supports (height: 100dvh) { .admin-sidebar { max-height: calc(100dvh - 56px); } }
+}
+@media (max-width: 520px) {
+  @supports (height: 100dvh) { .admin-sidebar { max-height: calc(100dvh - 52px); } }
+  /* flash messages: full width on small phones instead of a 380px box hanging off the right edge */
+  .flash-container { left: 1rem; right: 1rem; max-width: none; top: 72px; }
+}
+
+/* ---------- offline notice ---------- */
+.pwa-toast {
+  position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+  z-index: 3100; max-width: calc(100% - 32px);
+  padding: .65rem 1rem; border: 1px solid var(--warning); border-radius: var(--radius);
+  background: var(--panel); color: var(--text);
+  font-family: var(--font-display); font-size: .7rem; letter-spacing: .08em; text-align: center;
+}
+
+/* ---------- install hint ---------- */
+.pwa-install {
+  position: fixed; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+  z-index: 3000; width: min(460px, calc(100% - 24px));
+  display: flex; align-items: center; gap: .85rem; padding: .8rem .9rem;
+  background: var(--panel); border: 1px solid var(--border-active); border-radius: var(--radius);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .6), var(--glow);
+  animation: pwa-rise .35s cubic-bezier(.2, .8, .2, 1);
+}
+@keyframes pwa-rise { from { opacity: 0; transform: translate(-50%, 16px); } to { opacity: 1; transform: translate(-50%, 0); } }
+.pwa-install__icon { flex: none; width: 44px; height: 44px; border-radius: 10px; }
+.pwa-install__text { flex: 1; min-width: 0; display: grid; gap: .2rem; font-size: .82rem; line-height: 1.35; color: var(--text-dim); }
+.pwa-install__text strong { color: var(--text); font-family: var(--font-display); font-size: .72rem; letter-spacing: .06em; font-weight: 700; }
+.pwa-install__share { display: inline-flex; vertical-align: -3px; color: var(--accent); }
+.pwa-install__btn {
+  justify-self: start; margin-top: .25rem; padding: .5rem 1rem; min-height: 40px;
+  background: var(--accent); color: var(--bg); border: 0; border-radius: var(--radius);
+  font-family: var(--font-display); font-size: .7rem; font-weight: 700; letter-spacing: .1em; cursor: pointer;
+}
+.pwa-install__close {
+  flex: none; width: 44px; height: 44px; margin-right: -.4rem;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: none; border: 0; color: var(--text-dim); cursor: pointer;
+}
+.pwa-install__close:hover, .pwa-install__close:focus-visible { color: var(--accent); }
+html.is-standalone .pwa-install { display: none; }
+@media (prefers-reduced-motion: reduce) { .pwa-install { animation: none; } }
