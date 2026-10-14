@@ -17,15 +17,14 @@ BRAND_BG = '#040804'   # --bg in main.css
 
 
 def _icon(name, max_age=86400):
-    return send_from_directory(current_app.static_folder, f'icons/{name}', max_age=max_age)
+    return send_from_directory(current_app.static_folder, f'images/icons/{name}', max_age=max_age)
 
 
 @pwa_bp.route('/manifest.webmanifest')
 @limiter.exempt
 def manifest():
     def static(name):
-        return url_for('static', filename=name)
-
+        return url_for('static', filename=f'images/{name}')
     data = {
         'id': '/',
         'name': 'IN YOUR SOUL',

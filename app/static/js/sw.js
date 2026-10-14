@@ -13,7 +13,7 @@
 const VERSION = 'v1';
 const CACHE = `iys-static-${VERSION}`;
 const OFFLINE_URL = '/offline';
-const PRECACHE = [OFFLINE_URL, '/static/icons/icon-192.png'];
+const PRECACHE = [OFFLINE_URL, '/static/images/icons/icon-192.png'];
 const MAX_ENTRIES = 150;
 
 self.addEventListener('install', (event) => {

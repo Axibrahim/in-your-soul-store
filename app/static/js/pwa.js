@@ -105,7 +105,7 @@
     banner.setAttribute('aria-label', 'Add IN YOUR SOUL to your Home Screen');
 
     var img = el('img', 'pwa-install__icon');
-    img.src = '/static/icons/icon-192.png';
+    img.src = '/static/images/icons/icon-192.png';
     img.alt = '';
     img.width = 44;
     img.height = 44;

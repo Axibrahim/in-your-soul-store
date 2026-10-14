@@ -9,6 +9,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}?v=4"/>
+  {% include 'partials/pwa_head.html' %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/pwa.css') }}?v=1"/>
   <style>
     .admin-topbar {
       position: fixed; top:0; left:240px; right:0; z-index:100;
@@ -109,6 +111,7 @@
 </div>
 
 <script src="{{ url_for('static', filename='js/main.js') }}?v=5"></script>
+<script src="{{ url_for('static', filename='js/pwa.js') }}?v=1"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

@@ -183,7 +183,10 @@ def register_token_hooks(app):
     @app.before_request
     def check_token_on_every_request():
         # Skip static files, login, register, logout — they don't need token
-        open_endpoints = {'auth.login', 'auth.register', 'auth.logout', 'static'}
+        open_endpoints = {
+            'auth.login', 'auth.register', 'auth.logout', 'static',
+            'pwa.manifest', 'pwa.service_worker', 'pwa.offline', 'pwa.favicon', 'pwa.apple_touch_icon',
+        }
         if request.endpoint in open_endpoints:
             return
 

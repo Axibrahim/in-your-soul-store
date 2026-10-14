@@ -81,12 +81,14 @@ def create_app(config_name='default'):
     from app.routes.account import account_bp
     from app.routes.admin import admin_bp
     from app.routes.cart import cart_bp
+    from app.routes.pwa import pwa_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(account_bp, url_prefix='/account')
     app.register_blueprint(admin_bp, url_prefix='/admin')
     app.register_blueprint(cart_bp, url_prefix='/cart')
+    app.register_blueprint(pwa_bp)
 
     from app.auth_guard import register_token_hooks
     register_token_hooks(app)
