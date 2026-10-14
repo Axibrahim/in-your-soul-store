@@ -70,7 +70,9 @@
   if (navigator.onLine === false) setOffline(true);
 
   /* ---------- 3. install hint ---------- */
-  if (standalone) return;
+  // Install banner removed. Still stops Chrome's own install mini-bar.
+  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); });
+  return;
 
   var path = location.pathname;
   var quiet = ['/admin', '/auth', '/cart', '/checkout'];
