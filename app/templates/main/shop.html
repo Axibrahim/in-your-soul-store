@@ -1,10 +1,11 @@
 {% extends 'base.html' %}
-{% block title %}Shop — IN YOUR SOUL{% endblock %}
+{% block title %}{% if current_category_name %}{{ current_category_name }} — Shop | IN YOUR SOUL{% else %}Shop Rave & Techno Streetwear | IN YOUR SOUL{% endif %}{% endblock %}
+{% block meta_description %}{% if current_category_name %}Browse {{ current_category_name }} from IN YOUR SOUL: oversized Egyptian rave & techno streetwear.{% else %}Browse every piece from IN YOUR SOUL: oversized Egyptian rave & techno streetwear, delivered across Egypt.{% endif %}{% endblock %}
 
 {% block content %}
 <div class="page-header">
   <div class="section-eyebrow">THE CONCERTE</div>
-  <h1 class="page-title">All Pieces</h1>
+  <h1 class="page-title">{{ current_category_name or 'All Pieces' }}</h1>
   <p class="page-subtitle">Feel The Vibes.</p>
 </div>
 

@@ -82,6 +82,7 @@ def create_app(config_name='default'):
     from app.routes.admin import admin_bp
     from app.routes.cart import cart_bp
     from app.routes.pwa import pwa_bp
+    from app.routes.seo import seo_bp, init_seo
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -89,6 +90,8 @@ def create_app(config_name='default'):
     app.register_blueprint(admin_bp, url_prefix='/admin')
     app.register_blueprint(cart_bp, url_prefix='/cart')
     app.register_blueprint(pwa_bp)
+    app.register_blueprint(seo_bp)
+    init_seo(app)
 
     from app.auth_guard import register_token_hooks
     register_token_hooks(app)

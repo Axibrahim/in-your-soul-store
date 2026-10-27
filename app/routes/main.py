@@ -1,11 +1,14 @@
 import os
-from flask import Blueprint, render_template, request, jsonify, session, current_app
+from flask import Blueprint, render_template, request, jsonify, session, current_app, abort, url_for
+from flask_login import current_user
+from urllib.parse import urlencode
 from app.models import Product, Category, db
 from app import cache
 from datetime import datetime, timedelta
 from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy import func
 from flask_sqlalchemy.pagination import Pagination
+from app.routes.seo import site_url
 
 main_bp = Blueprint('main', __name__)
 
@@ -182,19 +185,33 @@ def _get_shop_products(page, category_slug, sort, search):
 @main_bp.route('/shop')
 def shop():
     page = request.args.get('page', 1, type=int)
-    category_slug = request.args.get('category', None)
-    sort = request.args.get('sort', 'new')
-    search = request.args.get('q', None)
+    category_slug = request.args.get('category') or None
+    sort = request.args.get('sort') or 'new'
+    search = request.args.get('q') or None
 
     items, pg_page, pg_per_page, pg_total, categories = _get_shop_products(page, category_slug, sort, search)
     products = _ShopPage(pg_page, pg_per_page, items, pg_total)
+
+    # --- SEO: only the default listing and clean category pages are indexable.
+    # Sorted / searched / unknown-category variants are duplicates -> noindex.
+    category = next((c for c in categories if c.slug == category_slug), None)
+    seo_noindex = bool(search) or sort != 'new' or (category_slug is not None and category is None)
+    canon_params = {}
+    if category:
+        canon_params['category'] = category.slug
+    if pg_page > 1:
+        canon_params['page'] = pg_page
+    canonical_url = site_url() + url_for('main.shop') + ('?' + urlencode(canon_params) if canon_params else '')
 
     return render_template('main/shop.html',
                            products=products,
                            categories=categories,
                            current_category=category_slug,
+                           current_category_name=category.name if category else None,
                            sort=sort,
                            search=search,
+                           seo_noindex=seo_noindex,
+                           canonical_url=canonical_url,
                            latest_products=_get_latest_products(),
                            latest_bg=_get_latest_bg())
 
@@ -214,7 +231,47 @@ def _get_product_detail(product_id):
 @main_bp.route('/product/<int:product_id>')
 def product_detail(product_id):
     product, related = _get_product_detail(product_id)
-    return render_template('main/product_detail.html', product=product, related=related)
+
+    # Hidden / discontinued products should not stay in the index.
+    if not product.is_active and not (current_user.is_authenticated and getattr(current_user, 'is_admin', False)):
+        abort(404)
+
+    base = site_url()
+    url = f"{base}/product/{product.id}"
+    images = [u for u in (product.image_url, product.image_url_2, product.image_url_3, product.image_url_4) if u]
+    in_stock = product.get_total_stock() > 0
+    product_ld = {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": product.name,
+        "description": (product.description or f"{product.name} - oversized Egyptian rave & techno streetwear by IN YOUR SOUL.").strip(),
+        "sku": f"IYS-{product.id}",
+        "brand": {"@type": "Brand", "name": "IN YOUR SOUL"},
+        "offers": {
+            "@type": "Offer",
+            "url": url,
+            "priceCurrency": "EGP",
+            "price": f"{product.price:.2f}",
+            "itemCondition": "https://schema.org/NewCondition",
+            "availability": "https://schema.org/InStock" if in_stock else "https://schema.org/OutOfStock",
+        },
+    }
+    if images:
+        product_ld["image"] = images
+    if product.category:
+        product_ld["category"] = product.category.name
+    breadcrumb_ld = {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "Home", "item": base + "/"},
+            {"@type": "ListItem", "position": 2, "name": "Shop", "item": base + "/shop"},
+            {"@type": "ListItem", "position": 3, "name": product.name, "item": url},
+        ],
+    }
+    return render_template('main/product_detail.html', product=product, related=related,
+                           product_ld=product_ld, breadcrumb_ld=breadcrumb_ld)
+
 
 
 @main_bp.route('/about')

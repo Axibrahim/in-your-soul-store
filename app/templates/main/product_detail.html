@@ -1,5 +1,17 @@
 {% extends 'base.html' %}
-{% block title %}{{ product.name }} — IN YOUR SOUL{% endblock %}
+{% block title %}{{ product.name }} | IN YOUR SOUL Streetwear{% endblock %}
+{% block meta_description %}{{ ((product.description or ('Oversized Egyptian rave & techno streetwear by IN YOUR SOUL.'))|striptags|replace('\n',' ')|replace('\r',' ')|trim)|truncate(155, True) }} {{ '%.0f'|format(product.price) }} EGP.{% endblock %}
+{% block og_type %}product{% endblock %}
+{% block og_image %}{{ product.image_url if product.image_url else (site_url ~ url_for('static', filename='images/logo.png')) }}{% endblock %}
+{% block structured_data %}
+{{ super() }}
+<script type="application/ld+json">{{ product_ld|tojson }}</script>
+<script type="application/ld+json">{{ breadcrumb_ld|tojson }}</script>
+{% endblock %}
+{% block head %}
+<meta property="product:price:amount" content="{{ '%.2f'|format(product.price) }}"/>
+<meta property="product:price:currency" content="EGP"/>
+{% endblock %}
 
 {% block content %}
 <div class="product-detail">
@@ -21,22 +33,22 @@
       <div class="product-gallery-thumbs">
         {% if product.image_url %}
           <div class="product-thumb active" data-src="{{ product.image_url }}">
-            <img src="{{ product.image_url }}" alt="View 1"/>
+            <img src="{{ product.image_url }}" alt="{{ product.name }} — view 1"/>
           </div>
         {% endif %}
         {% if product.image_url_2 %}
           <div class="product-thumb" data-src="{{ product.image_url_2 }}">
-            <img src="{{ product.image_url_2 }}" alt="View 2"/>
+            <img src="{{ product.image_url_2 }}" alt="{{ product.name }} — view 2"/>
           </div>
         {% endif %}
         {% if product.image_url_3 %}
           <div class="product-thumb" data-src="{{ product.image_url_3 }}">
-            <img src="{{ product.image_url_3 }}" alt="View 3"/>
+            <img src="{{ product.image_url_3 }}" alt="{{ product.name }} — view 3"/>
           </div>
         {% endif %}
         {% if product.image_url_4 %}
           <div class="product-thumb" data-src="{{ product.image_url_4 }}">
-            <img src="{{ product.image_url_4 }}" alt="View 4"/>
+            <img src="{{ product.image_url_4 }}" alt="{{ product.name }} — view 4"/>
           </div>
         {% endif %}
       </div>

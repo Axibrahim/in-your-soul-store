@@ -2,11 +2,39 @@
 <html lang="en">
 <head>
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>IN YOUR SOUL — Online — STORE</title>
-  <meta name="description" content="IN YOUR SOUL — Egyptian rave & techno streetwear. Oversized drops built for the underground."/>
+  <title>{% block title %}IN YOUR SOUL — Egyptian Rave & Techno Streetwear{% endblock %}</title>
+  <meta name="description" content="{% block meta_description %}IN YOUR SOUL — Egyptian rave & techno streetwear. Oversized drops built for the underground.{% endblock %}"/>
+  <meta name="robots" content="{{ 'noindex, follow' if seo_noindex else 'index, follow, max-image-preview:large' }}"/>
+  <link rel="canonical" href="{{ canonical_url }}"/>
+
+  <!-- Open Graph / Twitter -->
+  <meta property="og:site_name" content="IN YOUR SOUL"/>
+  <meta property="og:type" content="{% block og_type %}website{% endblock %}"/>
+  <meta property="og:title" content="{{ self.title()|striptags|trim }}"/>
+  <meta property="og:description" content="{{ self.meta_description()|striptags|trim }}"/>
+  <meta property="og:url" content="{{ canonical_url }}"/>
+  <meta property="og:image" content="{% block og_image %}{{ site_url }}{{ url_for('static', filename='images/logo.png') }}{% endblock %}"/>
+  <meta property="og:locale" content="en_US"/>
+  <meta name="twitter:card" content="summary_large_image"/>
+  <meta name="twitter:title" content="{{ self.title()|striptags|trim }}"/>
+  <meta name="twitter:description" content="{{ self.meta_description()|striptags|trim }}"/>
+
+  {% block structured_data %}
+  <script type="application/ld+json">{{ {
+    "@context": "https://schema.org",
+    "@graph": [
+      {"@type": "Organization", "@id": site_url ~ "/#org", "name": "IN YOUR SOUL", "url": site_url,
+       "logo": site_url ~ url_for('static', filename='images/logo.png'), "areaServed": "EG"},
+      {"@type": "WebSite", "@id": site_url ~ "/#website", "url": site_url, "name": "IN YOUR SOUL",
+       "publisher": {"@id": site_url ~ "/#org"},
+       "potentialAction": {"@type": "SearchAction",
+         "target": site_url ~ "/shop?q={search_term_string}",
+         "query-input": "required name=search_term_string"}}
+    ]
+  }|tojson }}</script>
+  {% endblock %}
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
