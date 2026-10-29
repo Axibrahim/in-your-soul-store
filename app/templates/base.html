@@ -26,7 +26,7 @@
     "@context": "https://schema.org",
     "@graph": [
       {"@type": "Organization", "@id": site_url ~ "/#org", "name": "IN YOUR SOUL", "url": site_url,
-       "logo": site_url ~ url_for('static', filename='images/logo.png'), "areaServed": "EG"},
+       "logo": site_url ~ url_for('static', filename='images/logo.png'), "areaServed": {"@type": "Country", "name": "Egypt"}, "address": {"@type": "PostalAddress", "addressCountry": "EG"}},
       {"@type": "WebSite", "@id": site_url ~ "/#website", "url": site_url, "name": "IN YOUR SOUL",
        "publisher": {"@id": site_url ~ "/#org"},
        "potentialAction": {"@type": "SearchAction",
