@@ -92,7 +92,7 @@ def add_to_cart():
         return jsonify({'success': False, 'message': 'Invalid request'}), 400
 
     product = Product.query.get(product_id)
-    if not product:
+    if not product or not product.is_active:
         return jsonify({'success': False, 'message': 'Product not found'}), 404
 
     variant = ProductVariant.query.filter_by(product_id=product_id, size=size).first()
@@ -220,6 +220,15 @@ def checkout():
     shipping = 0 if subtotal >= 1500 else DELIVERY_FEE
 
     if request.method == 'POST':
+        # Refuse to place an order if a product in the cart was deleted or
+        # deactivated since it was added (it would be silently dropped, or an
+        # empty order could be created). Also clean the cart so the customer
+        # is not stuck with an item they cannot see or remove.
+        if not items or len(items) != len(cart) or any(not i['product'].is_active for i in items):
+            save_cart({i['key']: cart[i['key']] for i in items if i['product'].is_active})
+            flash('Some items in your cart are no longer available. Please review your cart.', 'danger')
+            return redirect(url_for('cart.view_cart'))
+
         # Re-validate the discount right before placing the order, so a code
         # that expired / hit its cap between page-load and submit is caught.
         discount, discount_amount, discount_error = get_applied_discount(subtotal)
