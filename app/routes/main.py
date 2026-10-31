@@ -299,7 +299,11 @@ def _maybe_cancel_expired_orders():
     if last is not None and now - last < timedelta(seconds=60):
         return
     _last_expired_check["at"] = now
-    cancel_expired_orders()
+    try:
+        cancel_expired_orders()
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("cancel_expired_orders failed")
 
 
 def cancel_expired_orders():
@@ -310,11 +314,24 @@ def cancel_expired_orders():
         Order.status == 'pending',
         Order.payment_deadline < datetime.utcnow()
     ).all()
+    changed = False
     for order in expired:
-        order.status = 'cancelled'
+        # Atomic claim: only the worker whose UPDATE really flips this row
+        # from 'pending' to 'cancelled' is allowed to restock it, so the
+        # same order can never be restocked twice.
+        claimed = Order.query.filter_by(id=order.id, status='pending').update(
+            {Order.status: 'cancelled'}, synchronize_session=False
+        )
+        if not claimed:
+            continue
+        changed = True
         for item in order.items:
-            variant = ProductVariant.query.get(item.variant_id)
-            if variant:
-                variant.stock += item.quantity
-    if expired:
+            if item.variant_id:
+                # Increment inside SQL, so a purchase made at the same
+                # moment is never overwritten.
+                ProductVariant.query.filter_by(id=item.variant_id).update(
+                    {ProductVariant.stock: ProductVariant.stock + item.quantity},
+                    synchronize_session=False
+                )
+    if changed:
         db.session.commit()

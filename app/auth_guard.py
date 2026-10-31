@@ -103,8 +103,14 @@ def validate_session_token() -> bool:
         if age > timedelta(days=7):
             return False  # token too old
 
-    current_user.session_issued_at = datetime.utcnow()
-    db.session.commit()
+    # Only write to the DB when the stamp is over an hour old. It used to be
+    # rewritten (and committed) on EVERY request, including the /cart/count
+    # call on every page load. The 7-day sliding window works the same.
+    now = datetime.utcnow()
+    if (not current_user.session_issued_at
+            or now - current_user.session_issued_at > timedelta(hours=1)):
+        current_user.session_issued_at = now
+        db.session.commit()
 
     return True
 

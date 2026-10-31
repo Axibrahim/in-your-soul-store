@@ -9,12 +9,17 @@ from flask_limiter.util import get_remote_address
 from flask_caching import Cache
 from config import config
 import os
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 db = SQLAlchemy()
 login_manager = LoginManager()
 bcrypt = Bcrypt()
 csrf = CSRFProtect()
-limiter = Limiter(key_func=get_remote_address, default_limits=["1000 per hour"])
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=["1000 per hour"],
+    storage_uri=os.environ.get("REDIS_URL", "memory://"),
+)
 # SimpleCache = in-process memory, no Redis/new infra needed. Note: with multiple
 # Gunicorn worker processes, each worker keeps its own separate cache copy (not
 # shared), so cache hit rate is somewhat lower than with a shared backend like
@@ -25,6 +30,10 @@ cache = Cache(config={"CACHE_TYPE": "SimpleCache", "CACHE_DEFAULT_TIMEOUT": 30})
 def create_app(config_name='default'):
     app = Flask(__name__)
     app.config.from_object(config[config_name])
+    # Railway's proxy sits in front of gunicorn. Without this, every visitor
+    # appears to come from the proxy's IP, so rate limits (login, register,
+    # guest checkout, 1000/hr default) are shared by ALL customers.
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
     if config_name == 'production':
         if not app.config['SECRET_KEY']:
             raise RuntimeError("SECRET_KEY env var must be set in production.")

@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session, current_app
 from flask_login import login_required, current_user
 from app.models import Product, ProductVariant, Order, OrderItem, Address, DiscountCode, db
 from app.email import send_admin_new_order_email
@@ -364,10 +364,23 @@ def checkout():
             db.session.add(order_item)
             
         if discount:
-            discount.uses_count += 1
+            # Atomic increment in SQL (a Python `+= 1` can lose a count when
+            # two orders use the same code at the same moment).
+            DiscountCode.query.filter_by(id=discount.id).update(
+                {DiscountCode.uses_count: DiscountCode.uses_count + 1},
+                synchronize_session=False
+            )
 
-        db.session.commit()
-
+        try:
+            db.session.commit()
+        except Exception:
+            # Stock decrements are in this same transaction, so the rollback
+            # also puts the stock back. The customer sees a clean message
+            # instead of a 500 page.
+            db.session.rollback()
+            current_app.logger.exception("Checkout commit failed")
+            flash('Something went wrong placing your order. Please try again.', 'danger')
+            return redirect(url_for('cart.checkout'))
         try:
             send_admin_new_order_email(order)
         except Exception:

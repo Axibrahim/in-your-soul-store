@@ -450,6 +450,14 @@ def update_order_status(order_id):
             # clock - but a genuine re-delivery (delivered -> cancelled ->
             # delivered again) does restart it, which is correct.
             order.delivered_at = datetime.utcnow()
+        if new_status == 'cancelled' and old_status != 'cancelled':
+            # Put the reserved stock back (checkout already deducted it).
+            for item in order.items:
+                if item.variant_id:
+                    ProductVariant.query.filter_by(id=item.variant_id).update(
+                        {ProductVariant.stock: ProductVariant.stock + item.quantity},
+                        synchronize_session=False
+                    )
         db.session.commit()
         flash(f'Order status updated to {new_status}.', 'success')
 

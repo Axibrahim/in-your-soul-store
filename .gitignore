@@ -38,3 +38,10 @@ Thumbs.db
 
 # Logs
 *.log
+
+
+# test + coverage output
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/

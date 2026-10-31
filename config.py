@@ -60,6 +60,18 @@ class DevelopmentConfig(Config):
     REMEMBER_COOKIE_SECURE = False
 
 
+class TestingConfig(Config):
+    TESTING = True
+    SECRET_KEY = "test-secret-key-not-for-production"
+    SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
+    SQLALCHEMY_ENGINE_OPTIONS = {}  # production pool / psycopg options do not apply to SQLite
+    WTF_CSRF_ENABLED = False
+    RATELIMIT_ENABLED = False
+    BCRYPT_LOG_ROUNDS = 4  # fast password hashing in tests
+    SESSION_COOKIE_SECURE = False
+    REMEMBER_COOKIE_SECURE = False
+
+
 class ProductionConfig(Config):
     DEBUG = False
     SESSION_COOKIE_SECURE = True
@@ -69,5 +81,6 @@ class ProductionConfig(Config):
 config = {
     "development": DevelopmentConfig,
     "production": ProductionConfig,
+    "testing": TestingConfig,
     "default": DevelopmentConfig,
 }
